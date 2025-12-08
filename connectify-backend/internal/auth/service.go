@@ -147,3 +147,32 @@ func (s *AuthService) GetTotalUserCount() (int64, error) {
 	count, err := s.UserCollection.CountDocuments(ctx, bson.M{})
 	return count, err
 }
+
+// ValidateToken parses and validates a JWT token
+func (s *AuthService) ValidateToken(tokenString string) (string, error) {
+	// Parse token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			secret = "secret"
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID, ok := claims["user_id"].(string)
+		if !ok {
+			return "", errors.New("invalid token: missing user_id")
+		}
+		return userID, nil
+	}
+
+	return "", errors.New("invalid token")
+}

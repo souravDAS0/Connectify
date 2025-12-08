@@ -59,17 +59,12 @@ func main() {
 		AllowHeaders: "*",
 	}))
 
-	// Register WebSocket routes
-	websocket.RegisterWebSocketRoutes(app, hub)
-
-	// Health check
-	app.Get("/ping", func(c *fiber.Ctx) error {
-		return c.SendString("pong")
-	})
-
 	// Register other routes
 	authService := auth.NewAuthService(db)
 	auth.RegisterRoutes(app, authService)
+
+	// Register WebSocket routes with auth
+	websocket.RegisterWebSocketRoutes(app, hub, authService)
 
 	musicService := music.NewMusicService(db)
 	playlistService := playlist.NewPlaylistService(db)

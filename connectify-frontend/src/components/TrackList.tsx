@@ -1,46 +1,32 @@
-import { useEffect, useState } from 'react';
+import React from 'react';
 import { getTracks } from '../api/tracks';
 import type { Track } from '../types';
 import { usePlayerStore } from '../store/usePlayerStore';
-import { wsService } from '../api/websocket';
+import { sendWebSocketMessage } from '../api/websocket';
 import { Play, Clock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
-export const TrackList = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { currentTrack, setTrack, setPlaying, setQueue, isPlaying } = usePlayerStore();
+const TrackList: React.FC = () => {
+  const { data: tracks, isLoading, error } = useQuery<Track[]>({
+    queryKey: ['tracks'],
+    queryFn: getTracks,
+  });
 
-  useEffect(() => {
-    const fetchTracks = async () => {
-      try {
-        const data = await getTracks();
-        setTracks(data);
-        setQueue(data); // Populate queue
-      } catch (error) {
-        console.error('Failed to fetch tracks:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTracks();
-  }, [setQueue]);
+  const { currentTrack, setCurrentTrack, setQueue, deviceId, isPlaying } = usePlayerStore();
 
   const handlePlay = (track: Track) => {
-    if (currentTrack?.id === track.id) {
-      // Toggle play/pause
-      if (isPlaying) {
-        wsService.pause(track.id, 0); // Position handling improved in actual player
-        setPlaying(false);
-      } else {
-        wsService.play(track.id, 0);
-        setPlaying(true);
-      }
-    } else {
-      // New track
-      setTrack(track);
-      setPlaying(true);
-      wsService.play(track.id, 0);
+    setCurrentTrack(track);
+    if (tracks) {
+      setQueue(tracks);
+    }
+
+    // Broadcast load event
+    sendWebSocketMessage('control:load', { track_id: track.id });
+    
+    // Claim active device if we initiate playback
+    if (deviceId) {
+       sendWebSocketMessage('device:set_active', { device_id: deviceId });
+       usePlayerStore.getState().setActiveDeviceId(deviceId);
     }
   };
 
@@ -50,7 +36,9 @@ export const TrackList = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-400">Loading tracks...</div>;
+  if (isLoading) return <div className="p-8 text-center text-gray-400">Loading tracks...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Error loading tracks.</div>;
+  if (!tracks) return null;
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
@@ -99,3 +87,5 @@ export const TrackList = () => {
     </div>
   );
 };
+
+export default TrackList;

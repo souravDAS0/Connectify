@@ -1,33 +1,71 @@
 import { create } from 'zustand';
-import type { Track, PlaybackState } from '../types';
+import type { Track } from '../types';
 
-interface PlayerStore extends PlaybackState {
+interface PlayerState {
+  currentTrack: Track | null;
+  isPlaying: boolean;
+  volume: number;
   queue: Track[];
-  setTrack: (track: Track) => void;
-  setPlaying: (isPlaying: boolean) => void;
-  setPosition: (position: number) => void;
+  queueIndex: number;
+  position: number;
+  deviceId: string | null;
+  activeDeviceId: string | null;
+  seekTarget: number | null;
+
+  setCurrentTrack: (track: Track) => void;
+  setIsPlaying: (isPlaying: boolean) => void;
   setVolume: (volume: number) => void;
-  setShuffle: (shuffle: boolean) => void;
-  setRepeat: (repeat: 'none' | 'one' | 'all') => void;
+  addToQueue: (track: Track) => void;
   setQueue: (tracks: Track[]) => void;
-  updateState: (state: Partial<PlaybackState>) => void;
+  nextTrack: () => void;
+  prevTrack: () => void;
+  setPosition: (position: number) => void;
+  setSeekTarget: (position: number | null) => void;
+  setDeviceId: (id: string) => void;
+  setActiveDeviceId: (id: string) => void;
 }
 
-export const usePlayerStore = create<PlayerStore>((set) => ({
+export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentTrack: null,
   isPlaying: false,
-  position: 0,
   volume: 1.0,
-  shuffle: false,
-  repeat: 'none',
   queue: [],
+  queueIndex: -1,
+  position: 0,
+  seekTarget: null,
+  deviceId: null,
+  activeDeviceId: null, // If null, assume this device or none?
 
-  setTrack: (track) => set({ currentTrack: track }),
-  setPlaying: (isPlaying) => set({ isPlaying }),
-  setPosition: (position) => set({ position }),
+  setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
+  setIsPlaying: (isPlaying) => set({ isPlaying }),
   setVolume: (volume) => set({ volume }),
-  setShuffle: (shuffle) => set({ shuffle }),
-  setRepeat: (repeat) => set({ repeat }),
-  setQueue: (queue) => set({ queue }),
-  updateState: (state) => set((prev) => ({ ...prev, ...state })),
+  setPosition: (position) => set({ position }),
+  setSeekTarget: (position) => set({ seekTarget: position }),
+  setDeviceId: (id) => set({ deviceId: id }),
+  setActiveDeviceId: (id) => set({ activeDeviceId: id }),
+
+  addToQueue: (track) => set((state) => ({ queue: [...state.queue, track] })),
+  setQueue: (tracks) => set({ queue: tracks }),
+  
+  nextTrack: () => {
+    const { queue, queueIndex } = get();
+    if (queueIndex < queue.length - 1) {
+      set({ 
+        queueIndex: queueIndex + 1,
+        currentTrack: queue[queueIndex + 1],
+        isPlaying: true 
+      });
+    }
+  },
+
+  prevTrack: () => {
+    const { queue, queueIndex } = get();
+    if (queueIndex > 0) {
+      set({ 
+        queueIndex: queueIndex - 1,
+        currentTrack: queue[queueIndex - 1],
+        isPlaying: true 
+      });
+    }
+  },
 }));

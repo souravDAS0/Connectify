@@ -1,5 +1,5 @@
 import { MonitorSmartphone, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
 import { usePlayerStore } from '../store/usePlayerStore';
@@ -27,6 +27,7 @@ const PlayerControls: React.FC = () => {
     setSeekTarget
   } = usePlayerStore();
   
+  const [showMobileVolume, setShowMobileVolume] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Check if this device is the active player
@@ -147,7 +148,7 @@ const PlayerControls: React.FC = () => {
   if (!currentTrack) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4 h-24">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4 h-auto min-h-[6rem] md:h-24 z-50">
       {/* Audio Element only exists if Active Device */}
       {isActiveDevice && (
         <audio
@@ -158,7 +159,8 @@ const PlayerControls: React.FC = () => {
         />
       )}
       
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+      {/* Desktop Layout */}
+      <div className="hidden md:flex max-w-7xl mx-auto items-center justify-between h-full">
         {/* Track Info */}
         <div className="w-1/3">
           <h3 className="text-white font-medium truncate">{currentTrack.title}</h3>
@@ -224,6 +226,80 @@ const PlayerControls: React.FC = () => {
             onChange={handleVolumeChange}
             className="w-24 accent-blue-600"
           />
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="md:hidden flex flex-col h-full justify-between pb-1">
+        {/* Top Row: Info + Controls */}
+        <div className="flex items-center justify-between mb-2">
+           <div className="flex-1 min-w-0 pr-4">
+             <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
+             <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
+           </div>
+           
+           <div className="flex items-center space-x-4">
+             <button 
+                onClick={togglePlay} 
+                className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
+              >
+                {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              </button>
+              
+              <div className="relative">
+                <button 
+                  onClick={() => setShowMobileVolume(!showMobileVolume)}
+                  className={`transition-colors ${showMobileVolume ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <Volume2 size={20} />
+                </button>
+                {/* Mobile Volume Popup */}
+                {showMobileVolume && (
+                  <div className="absolute  right-2 bottom-[72px] -rotate-90 -translate-y-1/2 translate-x-1/2  bg-gray-800 p-3 rounded-lg shadow-xl border border-gray-700 flex flex-col items-center min-w-[20px] ">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={volume}
+                      onChange={handleVolumeChange}
+                      className="w-24 h-2 accent-blue-600 appearance-auto cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+           </div>
+        </div>
+
+        {/* Middle Row: Device Status */}
+        <div className="flex justify-between items-center text-xs mb-2">
+             {isActiveDevice ? (
+               <span className="text-green-500 flex items-center gap-1">
+                 <MonitorSmartphone size={10} /> Playing on this device
+               </span>
+             ) : (
+               <button 
+                 onClick={handleTakeControl}
+                 className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
+               >
+                 <MonitorSmartphone size={10} /> Play Here
+               </button>
+             )}
+             <span className="text-gray-500">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
+        </div>
+
+        {/* Bottom Row: Progress Bar */}
+        <div className="w-full">
+           <input 
+             type="range" 
+             min={0} 
+             max={currentTrack.duration * 1000} 
+             value={position} 
+             onChange={handleSeek} 
+             onMouseUp={handleSeekEnd}
+             onTouchEnd={handleSeekEnd}
+             className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+           />
         </div>
       </div>
     </div>

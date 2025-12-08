@@ -1,4 +1,5 @@
 import { usePlayerStore } from '../store/usePlayerStore';
+import { getTrackById } from './tracks';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://192.168.31.244:3000/ws';
 
@@ -94,19 +95,43 @@ const handleMessage = (message: WebSocketMessage) => {
         store.setVolume(data.volume);
       }
 
-      if (typeof data.playing === 'boolean') {
-        store.setIsPlaying(data.playing);
-      }
-      
-      // If we are NOT the active device, strictly follow position
-      // OR if we just BECAME the active device, sync position to start cleanly
-      const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
-      const justBecameActive = !isActive && (store.deviceId === data.active_device_id) || (previousActiveDeviceId !== store.deviceId && isActive);
-
-      if (!isActive || justBecameActive) {
-         if (typeof data.position === 'number') {
-            store.setPosition(data.position); // Store expects ms
-         }
+      // Sync Track if changed
+      if (data.track_id && store.currentTrack?.id !== data.track_id) {
+          getTrackById(data.track_id).then((track) => {
+            store.setCurrentTrack(track);
+            // Apply other state updates after track is set to ensure consistency
+            if (typeof data.playing === 'boolean') {
+              store.setIsPlaying(data.playing);
+            }
+             // If we are NOT the active device, strictly follow position
+             // OR if we just BECAME the active device, sync position to start cleanly
+             const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
+             const justBecameActive = !isActive && (store.deviceId === data.active_device_id) || (previousActiveDeviceId !== store.deviceId && isActive);
+       
+             if (!isActive || justBecameActive) {
+                if (typeof data.position === 'number') {
+                   // Add a small delay/offset or just sync directly?
+                   // Direct sync is fine for now, the store handles it.
+                   store.setPosition(data.position); 
+                }
+             }
+          }).catch(console.error);
+      } else {
+        // Track hasn't changed, just update state
+        if (typeof data.playing === 'boolean') {
+          store.setIsPlaying(data.playing);
+        }
+        
+        // If we are NOT the active device, strictly follow position
+        // OR if we just BECAME the active device, sync position to start cleanly
+        const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
+        const justBecameActive = !isActive && (store.deviceId === data.active_device_id) || (previousActiveDeviceId !== store.deviceId && isActive);
+  
+        if (!isActive || justBecameActive) {
+           if (typeof data.position === 'number') {
+              store.setPosition(data.position); 
+           }
+        }
       }
       break;
       

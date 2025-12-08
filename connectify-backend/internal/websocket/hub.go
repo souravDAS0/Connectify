@@ -106,6 +106,41 @@ func NewHub(redisClient *redis.Client) *Hub {
 }
 
 func (h *Hub) Run() {
+	// Helper to save state
+	savePlaybackState := func(userID string, newState PlaybackState) {
+		ctx := context.Background()
+		key := "user:" + userID + ":playback"
+
+		// Get existing state
+		var currentState PlaybackState
+		val, err := h.redisClient.Get(ctx, key).Result()
+		if err == nil {
+			json.Unmarshal([]byte(val), &currentState)
+		}
+
+		// Merge updates
+		if newState.TrackID != "" {
+			currentState.TrackID = newState.TrackID
+		}
+		if newState.Position != nil {
+			currentState.Position = newState.Position
+		}
+		if newState.Playing != nil {
+			currentState.Playing = newState.Playing
+		}
+		if newState.Volume != 0 {
+			currentState.Volume = newState.Volume
+		}
+		if newState.ActiveDeviceID != "" {
+			currentState.ActiveDeviceID = newState.ActiveDeviceID
+		}
+		// ... sync other fields if needed
+
+		// Save back
+		data, _ := json.Marshal(currentState)
+		h.redisClient.Set(ctx, key, data, 24*time.Hour)
+	}
+
 	for {
 		select {
 		case client := <-h.register:
@@ -121,6 +156,23 @@ func (h *Hub) Run() {
 
 			// Register device in Redis
 			h.registerDevice(client)
+
+			// Send initial state if exists
+			ctx := context.Background()
+			key := "user:" + client.UserID + ":playback"
+			val, err := h.redisClient.Get(ctx, key).Result()
+			if err == nil {
+				var state PlaybackState
+				if err := json.Unmarshal([]byte(val), &state); err == nil {
+					// Use standard message format for initial sync
+					msg := Message{
+						Type: "playback:sync",
+						Data: state,
+					}
+					data, _ := json.Marshal(msg)
+					client.send <- data
+				}
+			}
 
 		case client := <-h.unregister:
 			if userClients, ok := h.clients[client.UserID]; ok {
@@ -142,6 +194,24 @@ func (h *Hub) Run() {
 			}
 
 		case userMsg := <-h.broadcast:
+			// Intercept broadcast to save state if it's a playback sync
+			var msg Message
+			if err := json.Unmarshal(userMsg.Message, &msg); err == nil {
+				if msg.Type == "playback:sync" {
+					// Extract state from message data map/struct
+					// This is tricky because Data is interface{}.
+					// We need to re-marshal/unmarshal or type assert if possible.
+					// Since it came from Redis string, it's likely a map[string]interface{}.
+
+					// Use a fresh unmarshal for safety
+					var state PlaybackState
+					dataBytes, _ := json.Marshal(msg.Data)
+					if err := json.Unmarshal(dataBytes, &state); err == nil {
+						savePlaybackState(userMsg.UserID, state)
+					}
+				}
+			}
+
 			if clients, ok := h.clients[userMsg.UserID]; ok {
 				for client := range clients {
 					select {
@@ -372,12 +442,15 @@ func (c *Client) readPump() {
 			stateData, _ := json.Marshal(msg.Data)
 			var loadCmd LoadTrackCommand
 			json.Unmarshal(stateData, &loadCmd)
-			// If loading a new track, we might want to play on this device if no other device is specified?
-			// Consistently, let's play on active device if known.
+			// Fetch current state to check if there is an active device
+			ctx := context.Background()
+			key := "user:" + c.UserID + ":playback"
+			val, err := c.hub.redisClient.Get(ctx, key).Result()
 
-			// We need to know who is active. We don't track it in Hub strictly, we just broadcast updates.
-			// The frontend should send active_device_id. If missing, we assume sender takes control?
-			// Let's stick to the pattern:
+			var currentState PlaybackState
+			if err == nil {
+				json.Unmarshal([]byte(val), &currentState)
+			}
 
 			playing := true
 			position := 0
@@ -387,22 +460,11 @@ func (c *Client) readPump() {
 				Playing:  &playing,
 			}
 
-			// If we want to support "play on this device" explicitly, client sends active_device_id = c.DeviceID
-			// If client sends nothing (remote control load), we shouldn't force c.DeviceID unless we want to take over.
-			// But for now, let's default to c.DeviceID ONLY if we don't have a better idea, OR leave it empty
-			// so the currently active device just picks up the new track.
-			// Leaving it empty is safer for "remote control" behavior.
-
-			if c.DeviceID != "" {
-				// Actually, earlier behavior was: Load -> Play on sender.
-				// If we want remote load, we should respect that.
-				// The safest minimal change is: Don't force ActiveDeviceID if not needed,
-				// but for Load, if we don't specify, who plays?
-				// The subscribers update their state. Detailed track info is fetched by clients.
-				// Let's assume the client sends ActiveDeviceID if it wants to change it.
+			// Only set active device if none is currently active
+			if currentState.ActiveDeviceID == "" && c.DeviceID != "" {
+				state.ActiveDeviceID = c.DeviceID
 			}
 
-			// We won't force ActiveDeviceID here anymore.
 			c.hub.publishToRedis(c.UserID, state)
 
 		case "control:next":

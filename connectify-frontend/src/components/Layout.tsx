@@ -7,7 +7,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="bg-black min-h-screen text-white pb-24"> 
+    <div className="bg-black absolute top-0 left-0 right-0 min-h-screen text-white pb-24"> 
       {/* pb-24 ensures content isn't hidden behind fixed player */}
       <main>
         {children}

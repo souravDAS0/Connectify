@@ -10,6 +10,11 @@ export const recordPlay = async (trackId: string): Promise<void> => {
   await apiClient.post(`/tracks/${trackId}/play`);
 };
 
+export const getTrackById = async (trackId: string): Promise<Track> => {
+  const response = await apiClient.get(`/tracks/${trackId}`);
+  return response.data;
+};
+
 export const getStreamUrl = (trackId: string): string => {
   const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.31.244:3000';
   return `${baseUrl}/stream/${trackId}`;

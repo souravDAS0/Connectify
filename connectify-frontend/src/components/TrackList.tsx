@@ -3,7 +3,7 @@ import { getTracks } from '../api/tracks';
 import type { Track } from '../types';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { sendWebSocketMessage } from '../api/websocket';
-import { Play, Clock } from 'lucide-react';
+import { Play, Disc } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 const TrackList: React.FC = () => {
@@ -12,7 +12,7 @@ const TrackList: React.FC = () => {
     queryFn: getTracks,
   });
 
-  const { currentTrack, setCurrentTrack, setQueue, deviceId, isPlaying } = usePlayerStore();
+  const { currentTrack, setCurrentTrack, setQueue, isPlaying } = usePlayerStore();
 
   const handlePlay = (track: Track) => {
     setCurrentTrack(track);
@@ -22,67 +22,79 @@ const TrackList: React.FC = () => {
 
     // Broadcast load event
     sendWebSocketMessage('control:load', { track_id: track.id });
-    
-    // Claim active device if we initiate playback
-    if (deviceId) {
-       sendWebSocketMessage('device:set_active', { device_id: deviceId });
-       usePlayerStore.getState().setActiveDeviceId(deviceId);
-    }
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (isLoading) return <div className="p-8 text-center text-gray-400">Loading tracks...</div>;
   if (error) return <div className="p-8 text-center text-red-500">Error loading tracks.</div>;
   if (!tracks) return null;
 
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.31.244:3000';
+
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full max-w-7xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6 text-white">Library</h2>
-      <div className="bg-gray-900 rounded-lg overflow-hidden shadow-xl">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-800 text-gray-400 text-sm uppercase tracking-wider">
-          <div className="col-span-1">#</div>
-          <div className="col-span-5">Title</div>
-          <div className="col-span-3">Album</div>
-          <div className="col-span-2">Date Added</div>
-          <div className="col-span-1 text-right"><Clock size={16} /></div>
-        </div>
-        
-        <div className="divide-y divide-gray-800">
-          {tracks.map((track, index) => (
-            <div 
-              key={track.id}
-              onClick={() => handlePlay(track)}
-              className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-800 transition-colors cursor-pointer group items-center ${
-                currentTrack?.id === track.id ? 'bg-gray-800 text-green-400' : 'text-gray-300'
-              }`}
-            >
-              <div className="col-span-1 text-gray-500 group-hover:text-white">
-                {currentTrack?.id === track.id && isPlaying ? (
-                  <div className="w-4 h-4 animate-pulse bg-green-500 rounded-full" />
-                ) : (
-                  <span className="group-hover:hidden">{index + 1}</span>
-                )}
-                <Play size={16} className="hidden group-hover:block text-white" />
-              </div>
-              <div className="col-span-5">
-                <div className="font-medium truncate">{track.title}</div>
-                <div className="text-sm text-gray-500 truncate">{track.artist}</div>
-              </div>
-              <div className="col-span-3 text-gray-400 truncate">{track.album}</div>
-              <div className="col-span-2 text-gray-400 text-sm">
-                {new Date(track.created_at).toLocaleDateString()}
-              </div>
-              <div className="col-span-1 text-right text-gray-500">
-                {formatDuration(track.duration)}
+      
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {tracks.map((track) => (
+          <div 
+            key={track.id}
+            onClick={() => handlePlay(track)}
+            className={`group relative bg-gray-900 rounded-lg p-4 hover:bg-gray-800 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl ${
+              currentTrack?.id === track.id ? 'ring-2 ring-green-500' : ''
+            }`}
+          >
+            {/* Cover Image */}
+            <div className="relative aspect-square mb-4 rounded-md overflow-hidden bg-gray-800 shadow-inner group-hover:shadow-none">
+              {track.album_art_url ? (
+                <img 
+                  src={`${baseUrl}${track.album_art_url}`} 
+                  alt={track.title} 
+                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600">
+                  <Disc size={48} />
+                </div>
+              )}
+              
+              {/* Play Overlay */}
+              <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${
+                currentTrack?.id === track.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}>
+                <div className="bg-green-500 text-black rounded-full p-3 transform transition-transform duration-300 hover:scale-110 shadow-lg">
+                  {currentTrack?.id === track.id && isPlaying ? (
+                    <div className="w-6 h-6 flex items-center justify-center gap-1">
+                      <div className="w-1.5 h-6 bg-black animate-music-bar-1"/>
+                      <div className="w-1.5 h-6 bg-black animate-music-bar-2"/>
+                      <div className="w-1.5 h-6 bg-black animate-music-bar-3"/>
+                    </div>
+                  ) : (
+                    <Play size={24} fill="currentColor" />
+                  )}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Track Info */}
+            <div className="space-y-1">
+              <h3 className={`font-bold truncate ${currentTrack?.id === track.id ? 'text-green-400' : 'text-white'}`}>
+                {track.title}
+              </h3>
+              <div className="text-sm text-gray-400 truncate">
+                {track.artist}
+              </div>
+              <div className="text-xs text-gray-500 truncate flex items-center gap-1">
+                {track.album && (
+                  <>
+                    <span>{track.album}</span>
+                    {(track.year) && <span className="w-1 h-1 bg-gray-600 rounded-full" />}
+                  </>
+                )}
+                {track.year && <span>{track.year}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

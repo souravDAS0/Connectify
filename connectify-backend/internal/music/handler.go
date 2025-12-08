@@ -3,12 +3,10 @@ package music
 import (
 	"connectify-backend/internal/storage"
 	"fmt"
-	"io"
 	"log"
 	"mime/multipart"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -284,87 +282,17 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 		}
 
 		// Check if file exists
-		fileInfo, err := os.Stat(filePath)
-		if err != nil {
+		if _, err := os.Stat(filePath); err != nil {
 			return c.Status(404).JSON(fiber.Map{
 				"error": "Audio file not found",
 			})
 		}
 
-		fileSize := fileInfo.Size()
-
 		// Set content type
 		c.Set("Content-Type", track.MimeType)
-		c.Set("Accept-Ranges", "bytes")
 
-		// Handle range requests for seeking
-		rangeHeader := c.Get("Range")
-		if rangeHeader == "" {
-			// No range request, send full file
-			c.Set("Content-Length", fmt.Sprintf("%d", fileSize))
-			return c.SendFile(filePath)
-		}
-
-		// Parse range header (format: "bytes=start-end")
-		rangeHeader = strings.TrimPrefix(rangeHeader, "bytes=")
-		rangeParts := strings.Split(rangeHeader, "-")
-		if len(rangeParts) != 2 {
-			return c.Status(416).JSON(fiber.Map{
-				"error": "Invalid range",
-			})
-		}
-
-		start, err := strconv.ParseInt(rangeParts[0], 10, 64)
-		if err != nil || start < 0 || start >= fileSize {
-			return c.Status(416).JSON(fiber.Map{
-				"error": "Invalid range start",
-			})
-		}
-
-		// End is optional
-		var end int64
-		if rangeParts[1] == "" {
-			end = fileSize - 1
-		} else {
-			end, err = strconv.ParseInt(rangeParts[1], 10, 64)
-			if err != nil || end >= fileSize {
-				end = fileSize - 1
-			}
-		}
-
-		if start > end {
-			return c.Status(416).JSON(fiber.Map{
-				"error": "Invalid range",
-			})
-		}
-
-		contentLength := end - start + 1
-
-		// Open file
-		file, err := os.Open(filePath)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error": "Failed to open file",
-			})
-		}
-		defer file.Close()
-
-		// Seek to start position
-		_, err = file.Seek(start, 0)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error": "Failed to seek file",
-			})
-		}
-
-		// Set headers for partial content
-		c.Status(206) // Partial Content
-		c.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, fileSize))
-		c.Set("Content-Length", fmt.Sprintf("%d", contentLength))
-
-		// Send the range of bytes
-		limitedReader := io.LimitReader(file, contentLength)
-		return c.SendStream(limitedReader)
+		// SendFile handles range requests automatically
+		return c.SendFile(filePath)
 	})
 
 	// Get album art

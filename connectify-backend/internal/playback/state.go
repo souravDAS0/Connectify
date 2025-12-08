@@ -36,14 +36,14 @@ func SubscribeAndBroadcast(rdb *redis.Client, onUpdate func(PlaybackState)) {
 	go func() {
 		defer sub.Close()
 		log.Println("Started Redis subscription for playback events")
-		
+
 		for msg := range ch {
 			var state PlaybackState
 			if err := json.Unmarshal([]byte(msg.Payload), &state); err != nil {
 				log.Printf("Failed to unmarshal Redis message: %v", err)
 				continue
 			}
-			
+
 			log.Printf("Received state from Redis: %+v", state)
 			onUpdate(state)
 		}

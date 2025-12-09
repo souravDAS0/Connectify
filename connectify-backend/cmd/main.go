@@ -50,6 +50,7 @@ func main() {
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
+		BodyLimit:             15 * 1024 * 1024, // 15MB
 	})
 
 	// Add CORS middleware

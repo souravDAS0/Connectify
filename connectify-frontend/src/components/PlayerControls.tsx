@@ -1,4 +1,4 @@
-import { MonitorSmartphone, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Disc, MonitorSmartphone, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
@@ -12,23 +12,25 @@ const formatTime = (seconds: number) => {
 };
 
 const PlayerControls: React.FC = () => {
-  const { 
-    currentTrack, 
-    isPlaying, 
-    volume, 
-    setIsPlaying, 
-    nextTrack, 
-    prevTrack, 
+  const {
+    currentTrack,
+    isPlaying,
+    volume,
+    setIsPlaying,
+    nextTrack,
+    prevTrack,
     setVolume,
     deviceId,
     activeDeviceId,
     position,
+    setPosition,
     seekTarget,
-    setSeekTarget
+    setSeekTarget,
   } = usePlayerStore();
   
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const lastSeekTimeRef = useRef<number>(0);
 
   // Check if this device is the active player
   const isActiveDevice = deviceId && deviceId === activeDeviceId;
@@ -46,43 +48,67 @@ const PlayerControls: React.FC = () => {
 
   // Handle remote seek requests
   useEffect(() => {
-    if (isActiveDevice && audioRef.current && typeof usePlayerStore.getState().seekTarget === 'number') {
-        const target = usePlayerStore.getState().seekTarget;
-        if (target !== null) {
-            audioRef.current.currentTime = target / 1000;
-            usePlayerStore.getState().setSeekTarget(null); // Reset after seeking
-        }
-    }
-  }, [usePlayerStore.getState().seekTarget, isActiveDevice]);
+    if (!isActiveDevice || !audioRef.current || seekTarget === null) return;
+
+    // Record seek time BEFORE applying
+    lastSeekTimeRef.current = Date.now();
+
+    // Apply the seek
+    audioRef.current.currentTime = seekTarget / 1000;
+
+    // Reset seekTarget
+    setSeekTarget(null);
+  }, [seekTarget, isActiveDevice, setSeekTarget]);
 
   // Update position locally when playing and sync with server
   useEffect(() => {
     if (!isActiveDevice || !isPlaying || !audioRef.current || !currentTrack) return;
-    
-    // Local update interval (for smooth UI)
-    const updateInterval = setInterval(() => {
-        if (audioRef.current) {
-            usePlayerStore.getState().setPosition(audioRef.current.currentTime * 1000);
+
+    // Combined update and sync interval
+    const syncInterval = setInterval(() => {
+      if (audioRef.current) {
+        const currentPosition = audioRef.current.currentTime * 1000;
+        const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
+
+        // Skip broadcast for 1000ms after seek to prevent race condition
+        const shouldSkipBroadcast = timeSinceLastSeek < 1000;
+
+        // Always update local state (for UI)
+        usePlayerStore.getState().setPosition(currentPosition);
+
+        // Only sync to server if enough time passed since last seek
+        if (!shouldSkipBroadcast) {
+          sendWebSocketMessage('playback:update', {
+            track_id: currentTrack.id,
+            position: Math.round(currentPosition),
+            playing: true,
+            active_device_id: deviceId
+          });
         }
+      }
     }, 1000);
 
-    // Server sync interval (broadcast position to other devices)
-    const syncInterval = setInterval(() => {
-        if (audioRef.current) {
-             sendWebSocketMessage('playback:update', {
-                track_id: currentTrack.id,
-                position: audioRef.current.currentTime * 1000,
-                playing: true,
-                active_device_id: deviceId
-             });
-        }
-    }, 1000); // Sync every 1 second
-    
-    return () => {
-        clearInterval(updateInterval);
-        clearInterval(syncInterval);
-    };
+    return () => clearInterval(syncInterval);
   }, [isActiveDevice, isPlaying, currentTrack, deviceId]);
+
+  // Client-side position interpolation for non-active devices
+  useEffect(() => {
+    if (!isActiveDevice && isPlaying && currentTrack) {
+      const interpolateInterval = setInterval(() => {
+        // Only interpolate if we haven't received a server update recently
+
+        // Skip interpolation if server update was less than 150ms ago
+        // This prevents fighting with incoming playback:sync messages
+          setPosition((prev) => {
+            const newPos = prev + 100; // Increment by 100ms
+            // Don't exceed track duration
+            return Math.min(newPos, currentTrack.duration * 1000);
+          });
+      }, 100);
+
+      return () => clearInterval(interpolateInterval);
+    }
+  }, [isActiveDevice, isPlaying, currentTrack,  setPosition]);
 
   useEffect(() => {
     if (!isActiveDevice || !audioRef.current) return;
@@ -124,13 +150,15 @@ const PlayerControls: React.FC = () => {
     usePlayerStore.getState().setPosition(newPos); // Update UI immediately
   };
 
-  const handleSeekEnd = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
+  const handleSeekEnd = () => {
      const newPos = usePlayerStore.getState().position;
-     // If active device, update audio
+
+     // If active device, update audio and record seek time
      if (isActiveDevice && audioRef.current) {
+         lastSeekTimeRef.current = Date.now();
          audioRef.current.currentTime = newPos / 1000;
      }
-     
+
      // Send seek command to server (for all devices)
      sendWebSocketMessage('control:seek', { position: newPos });
   };
@@ -233,6 +261,20 @@ const PlayerControls: React.FC = () => {
       <div className="md:hidden flex flex-col h-full justify-between pb-1">
         {/* Top Row: Info + Controls */}
         <div className="flex items-center justify-between mb-2">
+            <div className='w-[32px] h-[32px] mr-2'>
+             {currentTrack.album_art_url ? (
+                <img
+                  src={currentTrack.album_art_url} 
+                  alt={currentTrack.title} 
+                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600">
+                  <Disc size={24} />
+                </div>
+              )}
+           </div>
+
            <div className="flex-1 min-w-0 pr-4">
              <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
              <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>

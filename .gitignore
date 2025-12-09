@@ -1,2 +1,4 @@
 connectify-backend/storage
-.env
+connectify-backend/.env
+connectify-admin/.env
+connectify-frontend/.env

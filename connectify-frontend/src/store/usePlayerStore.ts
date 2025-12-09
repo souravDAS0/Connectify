@@ -19,7 +19,7 @@ interface PlayerState {
   setQueue: (tracks: Track[]) => void;
   nextTrack: () => void;
   prevTrack: () => void;
-  setPosition: (position: number) => void;
+  setPosition: (position: number | ((prev: number) => number)) => void;
   setSeekTarget: (position: number | null) => void;
   setDeviceId: (id: string) => void;
   setActiveDeviceId: (id: string) => void;
@@ -39,7 +39,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
   setVolume: (volume) => set({ volume }),
-  setPosition: (position) => set({ position }),
+  setPosition: (position) => set((state) => ({ 
+    position: typeof position === 'function' ? position(state.position) : position 
+  })),
   setSeekTarget: (position) => set({ seekTarget: position }),
   setDeviceId: (id) => set({ deviceId: id }),
   setActiveDeviceId: (id) => set({ activeDeviceId: id }),

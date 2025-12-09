@@ -197,7 +197,8 @@ func (h *Hub) Run() {
 			// Intercept broadcast to save state if it's a playback sync
 			var msg Message
 			if err := json.Unmarshal(userMsg.Message, &msg); err == nil {
-				if msg.Type == "playback:sync" {
+				switch msg.Type {
+				case "playback:sync":
 					// Extract state from message data map/struct
 					// This is tricky because Data is interface{}.
 					// We need to re-marshal/unmarshal or type assert if possible.
@@ -207,6 +208,14 @@ func (h *Hub) Run() {
 					var state PlaybackState
 					dataBytes, _ := json.Marshal(msg.Data)
 					if err := json.Unmarshal(dataBytes, &state); err == nil {
+						savePlaybackState(userMsg.UserID, state)
+					}
+				case "control:seek":
+					// Also save state for seek commands
+					var seekCmd SeekCommand
+					dataBytes, _ := json.Marshal(msg.Data)
+					if err := json.Unmarshal(dataBytes, &seekCmd); err == nil {
+						state := PlaybackState{Position: &seekCmd.Position}
 						savePlaybackState(userMsg.UserID, state)
 					}
 				}
@@ -429,11 +438,14 @@ func (c *Client) readPump() {
 				continue
 			}
 
-			// Update playback state with new position
-			state := PlaybackState{
-				Position: &seekCmd.Position,
+			// Broadcast the specific control command so active devices can handle it
+			// We send the command as-is, instead of converting to playback:sync
+			// This triggers the 'control:seek' handler on the frontend which sets seekTarget
+			cmd := Message{
+				Type: "control:seek",
+				Data: seekCmd,
 			}
-			c.hub.publishToRedis(c.UserID, state)
+			c.hub.publishToRedis(c.UserID, cmd)
 
 		case "control:volume":
 			stateData, _ := json.Marshal(msg.Data)

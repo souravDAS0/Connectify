@@ -22,8 +22,7 @@ type Track struct {
 	MimeType string `bson:"mime_type" json:"mime_type"`      // audio/mpeg, etc.
 
 	// Album art
-	AlbumArtPath string `bson:"album_art_path" json:"-"`      // Hidden from JSON
-	AlbumArtURL  string `bson:"-" json:"album_art_url,omitempty"` // Computed field, not stored in DB
+	AlbumArtURL  string `bson:"album_art_url,omitempty" json:"album_art_url,omitempty"` // Stored in DB and returned in API
 
 	// Legacy support for external URLs
 	URL string `bson:"url,omitempty" json:"url,omitempty"` // External URL (optional)

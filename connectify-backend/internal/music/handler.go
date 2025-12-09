@@ -4,7 +4,7 @@ import (
 	"connectify-backend/internal/storage"
 	"fmt"
 	"log"
-	"mime/multipart"
+
 	"os"
 	"strconv"
 	"time"
@@ -73,12 +73,6 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 		}
 		audioFile := audioFiles[0]
 
-		// Get optional album art
-		var albumArtFile *multipart.FileHeader = nil
-		if artFiles := form.File["album_art"]; len(artFiles) > 0 {
-			albumArtFile = artFiles[0]
-		}
-
 		// Parse metadata from form values
 		title := c.FormValue("title")
 		artist := c.FormValue("artist")
@@ -86,6 +80,7 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 		genre := c.FormValue("genre")
 		yearStr := c.FormValue("year")
 		durationStr := c.FormValue("duration")
+		albumArtURL := c.FormValue("album_art_url") // Optional URL field
 
 		// Validate required fields
 		if title == "" || artist == "" {
@@ -123,36 +118,23 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 			})
 		}
 
-		// Save album art if provided
-		var albumArtInfo *storage.FileInfo
-		if albumArtFile != nil {
-			albumArtInfo, err = storageService.SaveAlbumArt(albumArtFile)
-			if err != nil {
-				// Log error but don't fail - album art is optional
-				log.Printf("Failed to save album art: %v", err)
-			}
-		}
-
 		// Create track record
 		now := time.Now()
 		track := Track{
-			Title:     title,
-			Artist:    artist,
-			Album:     album,
-			Genre:     genre,
-			Duration:  duration,
-			Year:      year,
-			FilePath:  audioInfo.Path,
-			FileName:  audioInfo.FileName,
-			FileSize:  audioInfo.Size,
-			MimeType:  audioInfo.MimeType,
-			CreatedAt: now,
-			UpdatedAt: now,
-			PlayCount: 0,
-		}
-
-		if albumArtInfo != nil {
-			track.AlbumArtPath = albumArtInfo.Path
+			Title:       title,
+			Artist:      artist,
+			Album:       album,
+			Genre:       genre,
+			Duration:    duration,
+			Year:        year,
+			FilePath:    audioInfo.Path,
+			FileName:    audioInfo.FileName,
+			FileSize:    audioInfo.Size,
+			MimeType:    audioInfo.MimeType,
+			AlbumArtURL: albumArtURL,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+			PlayCount:   0,
 		}
 
 		// Save to database
@@ -160,9 +142,6 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 		if err != nil {
 			// Cleanup uploaded files on database error
 			storageService.DeleteFile(audioInfo.Path)
-			if albumArtInfo != nil {
-				storageService.DeleteFile(albumArtInfo.Path)
-			}
 			return c.Status(500).JSON(fiber.Map{
 				"error": "Failed to save track to database",
 			})
@@ -247,12 +226,6 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 			}
 		}
 
-		if track.AlbumArtPath != "" {
-			if err := storageService.DeleteFile(track.AlbumArtPath); err != nil {
-				log.Printf("Failed to delete album art: %v", err)
-			}
-		}
-
 		return c.SendStatus(204)
 	})
 
@@ -292,35 +265,6 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 		c.Set("Content-Type", track.MimeType)
 
 		// SendFile handles range requests automatically
-		return c.SendFile(filePath)
-	})
-
-	// Get album art
-	app.Get("/album-art/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-
-		track, err := service.GetTrackByID(id)
-		if err != nil {
-			return c.Status(404).JSON(fiber.Map{
-				"error": "Track not found",
-			})
-		}
-
-		if track.AlbumArtPath == "" {
-			return c.Status(404).JSON(fiber.Map{
-				"error": "No album art available",
-			})
-		}
-
-		filePath := storageService.GetFilePath(track.AlbumArtPath)
-
-		// Check if file exists
-		if _, err := os.Stat(filePath); err != nil {
-			return c.Status(404).JSON(fiber.Map{
-				"error": "Album art file not found",
-			})
-		}
-
 		return c.SendFile(filePath)
 	})
 

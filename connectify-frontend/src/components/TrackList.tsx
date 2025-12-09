@@ -28,15 +28,13 @@ const TrackList: React.FC = () => {
   if (error) return <div className="p-8 text-center text-red-500">Error loading tracks.</div>;
   if (!tracks) return null;
 
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.31.244:3000';
-
   return (
     <div className="w-full max-w-7xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6 text-white">Library</h2>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {tracks.map((track) => (
-          <div 
+          <div
             key={track.id}
             onClick={() => handlePlay(track)}
             className={`group relative bg-gray-900 rounded-lg p-4 hover:bg-gray-800 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl ${
@@ -46,8 +44,8 @@ const TrackList: React.FC = () => {
             {/* Cover Image */}
             <div className="relative aspect-square mb-4 rounded-md overflow-hidden bg-gray-800 shadow-inner group-hover:shadow-none">
               {track.album_art_url ? (
-                <img 
-                  src={`${baseUrl}${track.album_art_url}`} 
+                <img
+                  src={track.album_art_url} 
                   alt={track.title} 
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                 />

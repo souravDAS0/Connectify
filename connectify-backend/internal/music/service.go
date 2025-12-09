@@ -47,13 +47,6 @@ func (s *MusicService) GetAllTracks() ([]Track, error) {
 		return nil, err
 	}
 
-	// Populate Album Art URL
-	for i := range tracks {
-		if tracks[i].AlbumArtPath != "" {
-			tracks[i].AlbumArtURL = "/album-art/" + tracks[i].ID.Hex()
-		}
-	}
-
 	return tracks, nil
 }
 
@@ -71,10 +64,6 @@ func (s *MusicService) GetTrackByID(id string) (*Track, error) {
 	err = s.TrackCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&track)
 	if err != nil {
 		return nil, err
-	}
-
-	if track.AlbumArtPath != "" {
-		track.AlbumArtURL = "/album-art/" + track.ID.Hex()
 	}
 
 	return &track, nil
@@ -171,13 +160,6 @@ func (s *MusicService) GetPopularTracks(limit int) ([]Track, error) {
 		return nil, err
 	}
 
-	// Populate Album Art URL
-	for i := range tracks {
-		if tracks[i].AlbumArtPath != "" {
-			tracks[i].AlbumArtURL = "/album-art/" + tracks[i].ID.Hex()
-		}
-	}
-
 	return tracks, nil
 }
 
@@ -199,13 +181,6 @@ func (s *MusicService) GetRecentTracks(limit int) ([]Track, error) {
 	var tracks []Track
 	if err := cursor.All(ctx, &tracks); err != nil {
 		return nil, err
-	}
-
-	// Populate Album Art URL
-	for i := range tracks {
-		if tracks[i].AlbumArtPath != "" {
-			tracks[i].AlbumArtURL = "/album-art/" + tracks[i].ID.Hex()
-		}
 	}
 
 	return tracks, nil

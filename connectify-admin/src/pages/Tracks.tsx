@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTracks, deleteTrack } from '../api/tracks';
 import UploadModal from '../components/UploadModal';
+import EditTrackModal from '../components/EditTrackModal';
 import toast from 'react-hot-toast';
-import { Music, Trash2, Upload } from 'lucide-react';
+import { Music, Trash2, Upload, Edit } from 'lucide-react';
 
 export default function Tracks() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [editTrackId, setEditTrackId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: tracks, isLoading } = useQuery({
@@ -119,13 +121,22 @@ export default function Tracks() {
                       {track.play_count}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleDelete(track.id, track.title)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Delete track"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setEditTrackId(track.id)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Edit track"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(track.id, track.title)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete track"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -157,6 +168,14 @@ export default function Tracks() {
           queryClient.invalidateQueries({ queryKey: ['tracks'] });
         }}
       />
+
+      {editTrackId && (
+        <EditTrackModal
+          trackId={editTrackId}
+          isOpen={!!editTrackId}
+          onClose={() => setEditTrackId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -386,7 +386,6 @@ func (c *Client) readPump() {
 			stateData, _ := json.Marshal(msg.Data)
 			var state PlaybackState
 			if err := json.Unmarshal(stateData, &state); err != nil {
-				log.Printf("Failed to unmarshal playback:update from client %s: %v", c.ID, err)
 				continue
 			}
 			state.ActiveDeviceID = c.DeviceID // Mark this device as active sender
@@ -421,19 +420,16 @@ func (c *Client) readPump() {
 			state.Position = &position
 			c.hub.publishToRedis(c.UserID, state)
 
-		case "control:seek":
-			stateData, _ := json.Marshal(msg.Data)
+			stateData, _ = json.Marshal(msg.Data)
 			var seekCmd SeekCommand
-			if err := json.Unmarshal(stateData, &seekCmd); err != nil {
-				log.Printf("Failed to unmarshal seek command: %v", err)
-				continue
-			}
+			json.Unmarshal(stateData, &seekCmd)
 
-			// Update playback state with new position
-			state := PlaybackState{
-				Position: &seekCmd.Position,
+			// Broadcast seek command to all devices explicitly
+			cmd := Message{
+				Type: "control:seek",
+				Data: seekCmd,
 			}
-			c.hub.publishToRedis(c.UserID, state)
+			c.hub.publishToRedis(c.UserID, cmd)
 
 		case "control:volume":
 			stateData, _ := json.Marshal(msg.Data)

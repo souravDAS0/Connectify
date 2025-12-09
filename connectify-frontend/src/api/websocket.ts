@@ -106,7 +106,7 @@ const handleMessage = (message: WebSocketMessage) => {
              // If we are NOT the active device, strictly follow position
              // OR if we just BECAME the active device, sync position to start cleanly
              const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
-             const justBecameActive = !isActive && (store.deviceId === data.active_device_id) || (previousActiveDeviceId !== store.deviceId && isActive);
+             const justBecameActive = previousActiveDeviceId !== store.deviceId && isActive;
        
              if (!isActive || justBecameActive) {
                 if (typeof data.position === 'number') {
@@ -125,7 +125,7 @@ const handleMessage = (message: WebSocketMessage) => {
         // If we are NOT the active device, strictly follow position
         // OR if we just BECAME the active device, sync position to start cleanly
         const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
-        const justBecameActive = !isActive && (store.deviceId === data.active_device_id) || (previousActiveDeviceId !== store.deviceId && isActive);
+        const justBecameActive = previousActiveDeviceId !== store.deviceId && isActive;
   
         if (!isActive || justBecameActive) {
            if (typeof data.position === 'number') {

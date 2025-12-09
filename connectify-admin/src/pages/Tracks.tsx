@@ -4,7 +4,7 @@ import { getTracks, deleteTrack } from '../api/tracks';
 import UploadModal from '../components/UploadModal';
 import EditTrackModal from '../components/EditTrackModal';
 import toast from 'react-hot-toast';
-import { Music, Trash2, Upload, Edit } from 'lucide-react';
+import { Music, Trash2, Upload, Edit, Disc } from 'lucide-react';
 
 export default function Tracks() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -94,7 +94,21 @@ export default function Tracks() {
                   <tr key={track.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <Music className="text-gray-400 mr-3" size={20} />
+                        <div className='w-[32px] h-[32px] mr-2'>
+                          {track.album_art_url ? (
+                            <img
+                              src={track.album_art_url}
+                              alt={track.title}
+                              className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-600">
+                              <Music size={24} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* <Music className="text-gray-400 mr-3" size={20} /> */}
                         <div>
                           <div className="text-sm font-medium text-gray-900">
                             {track.title}

@@ -46,4 +46,5 @@ export interface UploadFormData {
   genre: string;
   year: string;
   duration: string;
+  album_art_url?: string;
 }

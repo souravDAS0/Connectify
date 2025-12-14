@@ -27,7 +27,7 @@ const PlayerControls: React.FC = () => {
     seekTarget,
     setSeekTarget,
   } = usePlayerStore();
-  
+
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
@@ -99,16 +99,16 @@ const PlayerControls: React.FC = () => {
 
         // Skip interpolation if server update was less than 150ms ago
         // This prevents fighting with incoming playback:sync messages
-          setPosition((prev) => {
-            const newPos = prev + 100; // Increment by 100ms
-            // Don't exceed track duration
-            return Math.min(newPos, currentTrack.duration * 1000);
-          });
+        setPosition((prev) => {
+          const newPos = prev + 100; // Increment by 100ms
+          // Don't exceed track duration
+          return Math.min(newPos, currentTrack.duration * 1000);
+        });
       }, 100);
 
       return () => clearInterval(interpolateInterval);
     }
-  }, [isActiveDevice, isPlaying, currentTrack,  setPosition]);
+  }, [isActiveDevice, isPlaying, currentTrack, setPosition]);
 
   useEffect(() => {
     if (!isActiveDevice || !audioRef.current) return;
@@ -118,14 +118,14 @@ const PlayerControls: React.FC = () => {
   const togglePlay = () => {
     const newState = !isPlaying;
     setIsPlaying(newState); // Optimistic update
-    
+
     if (newState) {
-       sendWebSocketMessage('control:play', { 
-         track_id: currentTrack?.id,
-         active_device_id: activeDeviceId || deviceId
-       });
+      sendWebSocketMessage('control:play', {
+        track_id: currentTrack?.id,
+        active_device_id: activeDeviceId || deviceId
+      });
     } else {
-       sendWebSocketMessage('control:pause', {});
+      sendWebSocketMessage('control:pause', {});
     }
   };
 
@@ -151,25 +151,25 @@ const PlayerControls: React.FC = () => {
   };
 
   const handleSeekEnd = () => {
-     const newPos = usePlayerStore.getState().position;
+    const newPos = usePlayerStore.getState().position;
 
-     // If active device, update audio and record seek time
-     if (isActiveDevice && audioRef.current) {
-         lastSeekTimeRef.current = Date.now();
-         audioRef.current.currentTime = newPos / 1000;
-     }
+    // If active device, update audio and record seek time
+    if (isActiveDevice && audioRef.current) {
+      lastSeekTimeRef.current = Date.now();
+      audioRef.current.currentTime = newPos / 1000;
+    }
 
-     // Send seek command to server (for all devices)
-     sendWebSocketMessage('control:seek', { position: newPos });
+    // Send seek command to server (for all devices)
+    sendWebSocketMessage('control:seek', { position: newPos });
   };
-  
+
   const handleTakeControl = () => {
     if (deviceId) {
-       sendWebSocketMessage('device:set_active', { 
-           device_id: deviceId,
-           position: usePlayerStore.getState().position // Send current position for seamless transfer
-       });
-       usePlayerStore.getState().setActiveDeviceId(deviceId);
+      sendWebSocketMessage('device:set_active', {
+        device_id: deviceId,
+        position: usePlayerStore.getState().position // Send current position for seamless transfer
+      });
+      usePlayerStore.getState().setActiveDeviceId(deviceId);
     }
   };
 
@@ -186,7 +186,7 @@ const PlayerControls: React.FC = () => {
           onError={(e) => console.error("Audio playback error:", e.currentTarget.error)}
         />
       )}
-      
+
       {/* Desktop Layout */}
       <div className="hidden md:flex max-w-7xl mx-auto items-center justify-between h-full">
         {/* Track Info */}
@@ -201,8 +201,8 @@ const PlayerControls: React.FC = () => {
             <button onClick={handlePrev} className="text-gray-400 hover:text-white transition-colors">
               <SkipBack size={24} />
             </button>
-            <button 
-              onClick={togglePlay} 
+            <button
+              onClick={togglePlay}
               className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
             >
               {isPlaying ? <Pause size={24} /> : <Play size={24} />}
@@ -212,35 +212,35 @@ const PlayerControls: React.FC = () => {
             </button>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-             {isActiveDevice ? (
-               <span className="text-green-500 flex items-center gap-1">
-                 <MonitorSmartphone size={10} /> Playing on this device
-               </span>
-             ) : (
-               <button 
-                 onClick={handleTakeControl}
-                 className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
-               >
-                 <MonitorSmartphone size={10} /> Play Here
-               </button>
-             )}
-           </div>
-          
-           <div className="w-full flex items-center space-x-2 text-xs text-gray-400 mt-2">
-             <span>{formatTime(position / 1000)}</span>
-             <input 
-               type="range" 
-               min={0} 
-               max={currentTrack.duration * 1000} 
-               value={position} 
-               onChange={handleSeek} 
-               onMouseUp={handleSeekEnd}
-               onTouchEnd={handleSeekEnd}
-               className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
-             />
-             <span>{formatTime(currentTrack.duration)}</span>
-           </div>
-         </div>
+            {isActiveDevice ? (
+              <span className="text-green-500 flex items-center gap-1">
+                <MonitorSmartphone size={10} /> Playing on this device
+              </span>
+            ) : (
+              <button
+                onClick={handleTakeControl}
+                className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
+              >
+                <MonitorSmartphone size={10} /> Play Here
+              </button>
+            )}
+          </div>
+
+          <div className="w-full flex items-center space-x-2 text-xs text-gray-400 mt-2">
+            <span>{formatTime(position / 1000)}</span>
+            <input
+              type="range"
+              min={0}
+              max={currentTrack.duration * 1000}
+              value={position}
+              onChange={handleSeek}
+              onMouseUp={handleSeekEnd}
+              onTouchEnd={handleSeekEnd}
+              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+            />
+            <span>{formatTime(currentTrack.duration)}</span>
+          </div>
+        </div>
 
         {/* Volume */}
         <div className="flex items-center justify-end w-1/3 space-x-2">
@@ -261,87 +261,87 @@ const PlayerControls: React.FC = () => {
       <div className="md:hidden flex flex-col h-full justify-between pb-1">
         {/* Top Row: Info + Controls */}
         <div className="flex items-center justify-between mb-2">
-            <div className='w-[32px] h-[32px] mr-2'>
-             {currentTrack.album_art_url ? (
-                <img
-                  src={currentTrack.album_art_url} 
-                  alt={currentTrack.title} 
-                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-600">
-                  <Disc size={24} />
+          <div className='w-[32px] h-[32px] mr-2'>
+            {currentTrack.album_art_url ? (
+              <img
+                src={currentTrack.album_art_url}
+                alt={currentTrack.title}
+                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-600">
+                <Disc size={24} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0 pr-4">
+            <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
+            <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={togglePlay}
+              className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
+            >
+              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowMobileVolume(!showMobileVolume)}
+                className={`transition-colors ${showMobileVolume ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Volume2 size={20} />
+              </button>
+              {/* Mobile Volume Popup */}
+              {showMobileVolume && (
+                <div className="absolute  right-2 bottom-[72px] -rotate-90 -translate-y-1/2 translate-x-1/2  bg-gray-800 p-3 rounded-lg shadow-xl border border-gray-700 flex flex-col items-center min-w-[20px] ">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={volume}
+                    onChange={handleVolumeChange}
+                    className="w-24 h-2 accent-blue-600 appearance-auto cursor-pointer"
+                  />
                 </div>
               )}
-           </div>
-
-           <div className="flex-1 min-w-0 pr-4">
-             <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
-             <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
-           </div>
-           
-           <div className="flex items-center space-x-4">
-             <button 
-                onClick={togglePlay} 
-                className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
-              >
-                {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-              </button>
-              
-              <div className="relative">
-                <button 
-                  onClick={() => setShowMobileVolume(!showMobileVolume)}
-                  className={`transition-colors ${showMobileVolume ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
-                >
-                  <Volume2 size={20} />
-                </button>
-                {/* Mobile Volume Popup */}
-                {showMobileVolume && (
-                  <div className="absolute  right-2 bottom-[72px] -rotate-90 -translate-y-1/2 translate-x-1/2  bg-gray-800 p-3 rounded-lg shadow-xl border border-gray-700 flex flex-col items-center min-w-[20px] ">
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={volume}
-                      onChange={handleVolumeChange}
-                      className="w-24 h-2 accent-blue-600 appearance-auto cursor-pointer"
-                    />
-                  </div>
-                )}
-              </div>
-           </div>
+            </div>
+          </div>
         </div>
 
         {/* Middle Row: Device Status */}
         <div className="flex justify-between items-center text-xs mb-2">
-             {isActiveDevice ? (
-               <span className="text-green-500 flex items-center gap-1">
-                 <MonitorSmartphone size={10} /> Playing on this device
-               </span>
-             ) : (
-               <button 
-                 onClick={handleTakeControl}
-                 className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
-               >
-                 <MonitorSmartphone size={10} /> Play Here
-               </button>
-             )}
-             <span className="text-gray-500">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
+          {isActiveDevice ? (
+            <span className="text-green-500 flex items-center gap-1">
+              <MonitorSmartphone size={10} /> Playing on this device
+            </span>
+          ) : (
+            <button
+              onClick={handleTakeControl}
+              className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
+            >
+              <MonitorSmartphone size={10} /> Play Here
+            </button>
+          )}
+          <span className="text-gray-500">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
         </div>
 
         {/* Bottom Row: Progress Bar */}
         <div className="w-full">
-           <input 
-             type="range" 
-             min={0} 
-             max={currentTrack.duration * 1000} 
-             value={position} 
-             onChange={handleSeek} 
-             onMouseUp={handleSeekEnd}
-             onTouchEnd={handleSeekEnd}
-             className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
-           />
+          <input
+            type="range"
+            min={0}
+            max={currentTrack.duration * 1000}
+            value={position}
+            onChange={handleSeek}
+            onMouseUp={handleSeekEnd}
+            onTouchEnd={handleSeekEnd}
+            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+          />
         </div>
       </div>
     </div>

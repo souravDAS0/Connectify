@@ -2,23 +2,32 @@ import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { useAuth } from '@clerk/clerk-react';
 import Layout from './components/Layout';
 import TrackList from './components/TrackList';
 import Login from './pages/Login';
-import { useAuthStore } from './store/useAuthStore';
 import { usePlayerStore } from './store/usePlayerStore';
 import { initWebSocket } from './api/websocket';
 
-// Protected Route Component
+// Protected Route Component using Clerk
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        Loading...
+      </div>
+    );
+  }
+
+  return isSignedIn ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const queryClient = new QueryClient();
 
 function App() {
-  const { user, token } = useAuthStore();
+  const { isSignedIn, getToken } = useAuth();
   const setDeviceId = usePlayerStore((state) => state.setDeviceId);
 
   useEffect(() => {
@@ -40,11 +49,15 @@ function App() {
     setDeviceId(deviceId);
 
     // Initialize WebSocket if authenticated
-    if (user && token && deviceId) {
-      const cleanup = initWebSocket(token, deviceId);
-      return cleanup;
+    if (isSignedIn && deviceId) {
+      getToken().then((token) => {
+        if (token) {
+          const cleanup = initWebSocket(token, deviceId);
+          return cleanup;
+        }
+      });
     }
-  }, [user, token, setDeviceId]);
+  }, [isSignedIn, getToken, setDeviceId]);
 
   return (
       <QueryClientProvider client={queryClient}>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useClerk } from '@clerk/clerk-react';
 import PlayerControls from './PlayerControls';
 import { LogOut } from 'lucide-react';
 
@@ -7,9 +8,10 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const { signOut } = useClerk();
+
   const handleLogout = () => {
-    localStorage.clear();
-    window.location.reload();
+    signOut();
   };
 
   return (

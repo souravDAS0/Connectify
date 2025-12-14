@@ -19,7 +19,7 @@ func DefaultConfig() *StorageConfig {
 		basePath = "./storage"
 	}
 
-	maxFileSize := int64(100 * 1024 * 1024) // 100MB default
+	maxFileSize := int64(10 * 1024 * 1024) // 10MB default
 	if envSize := os.Getenv("MAX_FILE_SIZE"); envSize != "" {
 		// Parse env size if provided
 		fmt.Sscanf(envSize, "%d", &maxFileSize)
@@ -29,14 +29,14 @@ func DefaultConfig() *StorageConfig {
 		BasePath:    basePath,
 		MaxFileSize: maxFileSize,
 		AllowedAudioTypes: []string{
-			"audio/mpeg",     // MP3
-			"audio/wav",      // WAV
-			"audio/x-wav",    // WAV alternative
-			"audio/flac",     // FLAC
-			"audio/ogg",      // OGG
-			"audio/aac",      // AAC
-			"audio/x-m4a",    // M4A
-			"audio/mp4",      // M4A alternative
+			"audio/mpeg",  // MP3
+			"audio/wav",   // WAV
+			"audio/x-wav", // WAV alternative
+			"audio/flac",  // FLAC
+			"audio/ogg",   // OGG
+			"audio/aac",   // AAC
+			"audio/x-m4a", // M4A
+			"audio/mp4",   // M4A alternative
 		},
 		AllowedImageTypes: []string{
 			"image/jpeg",

@@ -7,6 +7,7 @@ import (
 
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,11 +25,11 @@ type AnalyticsServices struct {
 	}
 }
 
-func RegisterRoutes(app *fiber.App, service *MusicService, storageService *storage.StorageService) {
+func RegisterRoutes(app *fiber.App, service *MusicService, storageService storage.StorageProvider) {
 	RegisterRoutesWithAnalytics(app, service, storageService, nil)
 }
 
-func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageService *storage.StorageService, analyticsServices *AnalyticsServices) {
+func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageService storage.StorageProvider, analyticsServices *AnalyticsServices) {
 	// Legacy endpoint for adding tracks with JSON (kept for backward compatibility)
 	app.Post("/tracks", func(c *fiber.Ctx) error {
 		var track Track
@@ -241,31 +242,41 @@ func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageS
 			})
 		}
 
-		// Determine file path
+		// Determine file path or URL
 		var filePath string
 		if track.FilePath != "" {
-			filePath = storageService.GetFilePath(track.FilePath)
+			// Check if this is a Cloudinary public ID (contains "/" but not local path pattern)
+			isCloudinary := strings.Contains(track.FilePath, "/") &&
+				!strings.HasPrefix(track.FilePath, "tracks/") &&
+				!strings.HasPrefix(track.FilePath, "./storage")
+
+			if isCloudinary {
+				// Cloudinary - redirect to CDN URL
+				cloudinaryURL := storageService.GetFilePath(track.FilePath)
+				return c.Redirect(cloudinaryURL, 302)
+			} else {
+				// Local file - get absolute path
+				filePath = storageService.GetFilePath(track.FilePath)
+
+				// Check if file exists
+				if _, err := os.Stat(filePath); err != nil {
+					return c.Status(404).JSON(fiber.Map{
+						"error": "Audio file not found",
+					})
+				}
+
+				// Set content type and serve file
+				c.Set("Content-Type", track.MimeType)
+				return c.SendFile(filePath)
+			}
 		} else if track.URL != "" {
-			// For external URLs, redirect to the URL
+			// External URL - redirect
 			return c.Redirect(track.URL)
 		} else {
 			return c.Status(404).JSON(fiber.Map{
 				"error": "No audio source available",
 			})
 		}
-
-		// Check if file exists
-		if _, err := os.Stat(filePath); err != nil {
-			return c.Status(404).JSON(fiber.Map{
-				"error": "Audio file not found",
-			})
-		}
-
-		// Set content type
-		c.Set("Content-Type", track.MimeType)
-
-		// SendFile handles range requests automatically
-		return c.SendFile(filePath)
 	})
 
 	// Record play event

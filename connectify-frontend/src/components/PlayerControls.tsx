@@ -1,8 +1,9 @@
-import { Disc, MonitorSmartphone, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Disc, Pause, Play, SkipBack, SkipForward, Volume2, Smartphone } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
 import { usePlayerStore } from '../store/usePlayerStore';
+import ActiveDevicesModal from './ActiveDevicesModal';
 
 const formatTime = (seconds: number) => {
   if (!seconds) return '0:00';
@@ -26,9 +27,11 @@ const PlayerControls: React.FC = () => {
     setPosition,
     seekTarget,
     setSeekTarget,
+    activeDevices,
   } = usePlayerStore();
 
   const [showMobileVolume, setShowMobileVolume] = useState(false);
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
 
@@ -163,16 +166,6 @@ const PlayerControls: React.FC = () => {
     sendWebSocketMessage('control:seek', { position: newPos });
   };
 
-  const handleTakeControl = () => {
-    if (deviceId) {
-      sendWebSocketMessage('device:set_active', {
-        device_id: deviceId,
-        position: usePlayerStore.getState().position // Send current position for seamless transfer
-      });
-      usePlayerStore.getState().setActiveDeviceId(deviceId);
-    }
-  };
-
   if (!currentTrack) return null;
 
   return (
@@ -211,22 +204,8 @@ const PlayerControls: React.FC = () => {
               <SkipForward size={24} />
             </button>
           </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {isActiveDevice ? (
-              <span className="text-green-500 flex items-center gap-1">
-                <MonitorSmartphone size={10} /> Playing on this device
-              </span>
-            ) : (
-              <button
-                onClick={handleTakeControl}
-                className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
-              >
-                <MonitorSmartphone size={10} /> Play Here
-              </button>
-            )}
-          </div>
 
-          <div className="w-full flex items-center space-x-2 text-xs text-gray-400 mt-2">
+          <div className="w-full flex items-center space-x-2 text-xs text-gray-400 mt-4">
             <span>{formatTime(position / 1000)}</span>
             <input
               type="range"
@@ -242,18 +221,32 @@ const PlayerControls: React.FC = () => {
           </div>
         </div>
 
-        {/* Volume */}
-        <div className="flex items-center justify-end w-1/3 space-x-2">
-          <Volume2 size={20} className="text-gray-400" />
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={handleVolumeChange}
-            className="w-24 accent-blue-600"
-          />
+        {/* Volume & Devices */}
+        <div className="flex items-center justify-end w-1/3 space-x-4">
+          <button
+            onClick={() => setShowDevicesModal(true)}
+            className="text-gray-400 hover:text-white transition-colors relative"
+            title="View active devices"
+          >
+            <Smartphone size={20} />
+            {activeDevices.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {activeDevices.length}
+              </span>
+            )}
+          </button>
+          <div className="flex items-center space-x-2">
+            <Volume2 size={20} className="text-gray-400" />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-24 accent-blue-600"
+            />
+          </div>
         </div>
       </div>
 
@@ -280,12 +273,24 @@ const PlayerControls: React.FC = () => {
             <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <button
               onClick={togglePlay}
               className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
             >
               {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+            </button>
+
+            <button
+              onClick={() => setShowDevicesModal(true)}
+              className="text-gray-400 hover:text-white transition-colors relative"
+            >
+              <Smartphone size={20} />
+              {activeDevices.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                  {activeDevices.length}
+                </span>
+              )}
             </button>
 
             <div className="relative">
@@ -313,25 +318,8 @@ const PlayerControls: React.FC = () => {
           </div>
         </div>
 
-        {/* Middle Row: Device Status */}
-        <div className="flex justify-between items-center text-xs mb-2">
-          {isActiveDevice ? (
-            <span className="text-green-500 flex items-center gap-1">
-              <MonitorSmartphone size={10} /> Playing on this device
-            </span>
-          ) : (
-            <button
-              onClick={handleTakeControl}
-              className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
-            >
-              <MonitorSmartphone size={10} /> Play Here
-            </button>
-          )}
-          <span className="text-gray-500">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
-        </div>
-
-        {/* Bottom Row: Progress Bar */}
-        <div className="w-full">
+        {/* Progress Bar */}
+        <div className="w-full mb-1 flex flex-1 justify-between items-center gap-1">
           <input
             type="range"
             min={0}
@@ -340,10 +328,22 @@ const PlayerControls: React.FC = () => {
             onChange={handleSeek}
             onMouseUp={handleSeekEnd}
             onTouchEnd={handleSeekEnd}
-            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+            className="w-[80%] h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
           />
+          <span className="text-gray-400 text-xs">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
         </div>
+
+        {/* Time Display
+        <div className="text-center">
+          <span className="text-gray-400 text-xs">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
+        </div> */}
       </div>
+
+      {/* Active Devices Modal */}
+      <ActiveDevicesModal
+        isOpen={showDevicesModal}
+        onClose={() => setShowDevicesModal(false)}
+      />
     </div>
   );
 };

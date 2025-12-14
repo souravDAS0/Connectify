@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { Track } from '../types';
 
+export interface DeviceInfo {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 interface PlayerState {
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -11,6 +17,7 @@ interface PlayerState {
   deviceId: string | null;
   activeDeviceId: string | null;
   seekTarget: number | null;
+  activeDevices: DeviceInfo[];
 
   setCurrentTrack: (track: Track) => void;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -23,6 +30,7 @@ interface PlayerState {
   setSeekTarget: (position: number | null) => void;
   setDeviceId: (id: string) => void;
   setActiveDeviceId: (id: string) => void;
+  setActiveDevices: (devices: DeviceInfo[]) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -35,16 +43,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   seekTarget: null,
   deviceId: null,
   activeDeviceId: null, // If null, assume this device or none?
+  activeDevices: [],
 
   setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
   setVolume: (volume) => set({ volume }),
-  setPosition: (position) => set((state) => ({ 
-    position: typeof position === 'function' ? position(state.position) : position 
+  setPosition: (position) => set((state) => ({
+    position: typeof position === 'function' ? position(state.position) : position
   })),
   setSeekTarget: (position) => set({ seekTarget: position }),
   setDeviceId: (id) => set({ deviceId: id }),
   setActiveDeviceId: (id) => set({ activeDeviceId: id }),
+  setActiveDevices: (devices) => set({ activeDevices: devices }),
 
   addToQueue: (track) => set((state) => ({ queue: [...state.queue, track] })),
   setQueue: (tracks) => set({ queue: tracks }),

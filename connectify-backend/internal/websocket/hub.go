@@ -91,6 +91,17 @@ type SetActiveDeviceCommand struct {
 	Position int    `json:"position"`
 }
 
+type DeviceListUpdate struct {
+	Devices        []DeviceWithStatus `json:"devices"`
+	ActiveDeviceID string             `json:"active_device_id"`
+}
+
+type DeviceWithStatus struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	IsActive bool   `json:"is_active"`
+}
+
 func getPlaybackChannel(userID string) string {
 	return "playback:user:" + userID
 }
@@ -174,22 +185,71 @@ func (h *Hub) Run() {
 				}
 			}
 
+			// Broadcast updated device list to all user's clients
+			h.broadcastDeviceList(client.UserID)
+
 		case client := <-h.unregister:
 			if userClients, ok := h.clients[client.UserID]; ok {
 				if _, ok := userClients[client]; ok {
 					delete(userClients, client)
 					close(client.send)
-					log.Printf("Client %s disconnected", client.ID)
+					log.Printf("Client %s disconnected (Device: %s)", client.ID, client.DeviceID)
+
+					// Remove device from Redis
+					h.removeDevice(client.UserID, client.DeviceID)
+
+					// Check if the disconnecting device was the active device
+					ctx := context.Background()
+					key := "user:" + client.UserID + ":playback"
+					val, err := h.redisClient.Get(ctx, key).Result()
+
+					var wasActiveDevice bool
+					var currentState PlaybackState
+
+					if err == nil {
+						if err := json.Unmarshal([]byte(val), &currentState); err == nil {
+							wasActiveDevice = currentState.ActiveDeviceID == client.DeviceID
+						}
+					}
+
+					if wasActiveDevice {
+						log.Printf("Active device %s disconnected, handling device switch", client.DeviceID)
+
+						// Get remaining devices
+						remainingDevices, err := h.getActiveDevices(client.UserID)
+						if err == nil && len(remainingDevices) > 0 {
+							// Set first remaining device as active, but stop playback
+							playing := false
+							currentState.Playing = &playing
+							currentState.ActiveDeviceID = remainingDevices[0].ID
+							log.Printf("Switched active device to %s (playback stopped)", remainingDevices[0].ID)
+						} else {
+							// No remaining devices, clear active device
+							playing := false
+							currentState.Playing = &playing
+							currentState.ActiveDeviceID = ""
+							log.Printf("No remaining devices, cleared active device")
+						}
+
+						// Save updated state
+						data, _ := json.Marshal(currentState)
+						h.redisClient.Set(ctx, key, data, 24*time.Hour)
+
+						// Broadcast updated playback state
+						msg := Message{
+							Type: "playback:sync",
+							Data: currentState,
+						}
+						h.publishToRedis(client.UserID, msg)
+					}
+
+					// Broadcast updated device list to remaining clients
+					h.broadcastDeviceList(client.UserID)
 
 					// If no more clients for this user, clean up map
-					// Note: We leave the Redis subscription running for simplicity in this implementation,
-					// or we could track subscription state and cancel it.
 					if len(userClients) == 0 {
 						delete(h.clients, client.UserID)
 					}
-
-					// Remove device from active set (handled via TTL mainly, but good to clean up)
-					h.unregisterDevice(client)
 				}
 			}
 
@@ -282,6 +342,105 @@ func (h *Hub) unregisterDevice(c *Client) {
 
 	bytes, _ := json.Marshal(deviceData)
 	h.redisClient.SRem(ctx, key, string(bytes))
+}
+
+// getActiveDevices fetches all active devices for a user from Redis
+func (h *Hub) getActiveDevices(userID string) ([]DeviceInfo, error) {
+	ctx := context.Background()
+	key := "user:" + userID + ":devices"
+
+	deviceStrings, err := h.redisClient.SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	devices := make([]DeviceInfo, 0, len(deviceStrings))
+	for _, deviceStr := range deviceStrings {
+		var deviceData map[string]string
+		if err := json.Unmarshal([]byte(deviceStr), &deviceData); err != nil {
+			continue
+		}
+
+		devices = append(devices, DeviceInfo{
+			ID:   deviceData["id"],
+			Name: deviceData["name"],
+		})
+	}
+
+	return devices, nil
+}
+
+// removeDevice removes a specific device from Redis by device ID
+func (h *Hub) removeDevice(userID, deviceID string) error {
+	ctx := context.Background()
+	key := "user:" + userID + ":devices"
+
+	// Get all devices
+	deviceStrings, err := h.redisClient.SMembers(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+
+	// Find and remove the matching device
+	for _, deviceStr := range deviceStrings {
+		var deviceData map[string]string
+		if err := json.Unmarshal([]byte(deviceStr), &deviceData); err != nil {
+			continue
+		}
+
+		if deviceData["id"] == deviceID {
+			h.redisClient.SRem(ctx, key, deviceStr)
+			break
+		}
+	}
+
+	return nil
+}
+
+// broadcastDeviceList sends updated device list to all connected clients for a user
+func (h *Hub) broadcastDeviceList(userID string) {
+	// Get current active device from playback state
+	ctx := context.Background()
+	key := "user:" + userID + ":playback"
+	var activeDeviceID string
+
+	val, err := h.redisClient.Get(ctx, key).Result()
+	if err == nil {
+		var state PlaybackState
+		if err := json.Unmarshal([]byte(val), &state); err == nil {
+			activeDeviceID = state.ActiveDeviceID
+		}
+	}
+
+	// Get all active devices
+	devices, err := h.getActiveDevices(userID)
+	if err != nil {
+		log.Printf("Failed to get active devices: %v", err)
+		return
+	}
+
+	// Build device list with status
+	devicesWithStatus := make([]DeviceWithStatus, 0, len(devices))
+	for _, device := range devices {
+		devicesWithStatus = append(devicesWithStatus, DeviceWithStatus{
+			ID:       device.ID,
+			Name:     device.Name,
+			IsActive: device.ID == activeDeviceID,
+		})
+	}
+
+	// Create and publish message
+	update := DeviceListUpdate{
+		Devices:        devicesWithStatus,
+		ActiveDeviceID: activeDeviceID,
+	}
+
+	msg := Message{
+		Type: "device:list_update",
+		Data: update,
+	}
+
+	h.publishToRedis(userID, msg)
 }
 
 func (h *Hub) publishToRedis(userID string, msg interface{}) {
@@ -516,6 +675,53 @@ func (c *Client) readPump() {
 
 		case "ping":
 			response := Message{Type: "pong", Data: nil}
+			responseBytes, _ := json.Marshal(response)
+			select {
+			case c.send <- responseBytes:
+			default:
+				close(c.send)
+				return
+			}
+
+		case "device:get_list":
+			// Get current active device from playback state
+			ctx := context.Background()
+			key := "user:" + c.UserID + ":playback"
+			var activeDeviceID string
+
+			val, err := c.hub.redisClient.Get(ctx, key).Result()
+			if err == nil {
+				var state PlaybackState
+				if err := json.Unmarshal([]byte(val), &state); err == nil {
+					activeDeviceID = state.ActiveDeviceID
+				}
+			}
+
+			// Get all active devices
+			devices, err := c.hub.getActiveDevices(c.UserID)
+			if err != nil {
+				log.Printf("Failed to get active devices: %v", err)
+				continue
+			}
+
+			// Build device list with status
+			devicesWithStatus := make([]DeviceWithStatus, 0, len(devices))
+			for _, device := range devices {
+				devicesWithStatus = append(devicesWithStatus, DeviceWithStatus{
+					ID:       device.ID,
+					Name:     device.Name,
+					IsActive: device.ID == activeDeviceID,
+				})
+			}
+
+			// Send response directly to requesting client
+			response := Message{
+				Type: "device:list_update",
+				Data: DeviceListUpdate{
+					Devices:        devicesWithStatus,
+					ActiveDeviceID: activeDeviceID,
+				},
+			}
 			responseBytes, _ := json.Marshal(response)
 			select {
 			case c.send <- responseBytes:

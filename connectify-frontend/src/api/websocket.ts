@@ -39,6 +39,10 @@ export const initWebSocket = (token: string, deviceId: string) => {
         clearInterval(reconnectInterval);
         reconnectInterval = null;
       }
+      // Request device list on connection
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'device:get_list', data: {} }));
+      }
     };
 
     ws.onmessage = (event) => {
@@ -107,12 +111,16 @@ const handleMessage = (message: WebSocketMessage) => {
              // OR if we just BECAME the active device, sync position to start cleanly
              const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
              const justBecameActive = previousActiveDeviceId !== store.deviceId && isActive;
-       
+
              if (!isActive || justBecameActive) {
                 if (typeof data.position === 'number') {
                    // Add a small delay/offset or just sync directly?
                    // Direct sync is fine for now, the store handles it.
-                   store.setPosition(data.position); 
+                   store.setPosition(data.position);
+                   // If we just became active, trigger seek to the correct position
+                   if (justBecameActive) {
+                     store.setSeekTarget(data.position);
+                   }
                 }
              }
           }).catch(console.error);
@@ -126,10 +134,14 @@ const handleMessage = (message: WebSocketMessage) => {
         // OR if we just BECAME the active device, sync position to start cleanly
         const isActive = store.deviceId === (data.active_device_id || store.activeDeviceId);
         const justBecameActive = previousActiveDeviceId !== store.deviceId && isActive;
-  
+
         if (!isActive || justBecameActive) {
            if (typeof data.position === 'number') {
-              store.setPosition(data.position); 
+              store.setPosition(data.position);
+              // If we just became active, trigger seek to the correct position
+              if (justBecameActive) {
+                store.setSeekTarget(data.position);
+              }
            }
         }
       }
@@ -149,13 +161,30 @@ const handleMessage = (message: WebSocketMessage) => {
       store.setPosition(seekData.position);
       store.setSeekTarget(seekData.position);
       break;
-      
-    case 'device:set_active':
-       // Handled via playback:sync usually, but explicit event possible
-       if (message.data.device_id) {
-         store.setActiveDeviceId(message.data.device_id);
-       }
-       break;
+
+    case 'device:list_update':
+      // eslint-disable-next-line no-case-declarations
+      const deviceListData = message.data as {
+        devices: Array<{ id: string; name: string; is_active: boolean }>;
+        active_device_id: string;
+      };
+
+      // Update active devices list
+      if (deviceListData.devices) {
+        store.setActiveDevices(
+          deviceListData.devices.map(d => ({
+            id: d.id,
+            name: d.name,
+            isActive: d.is_active
+          }))
+        );
+      }
+
+      // Update active device ID if provided
+      if (deviceListData.active_device_id) {
+        store.setActiveDeviceId(deviceListData.active_device_id);
+      }
+      break;
   }
 };
 

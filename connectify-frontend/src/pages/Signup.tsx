@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
-import { SignIn, useAuth } from '@clerk/clerk-react';
+import { SignUp, useAuth } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import { dark } from '@clerk/themes';
 
-const Login: React.FC = () => {
+const Signup: React.FC = () => {
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
 
@@ -15,7 +15,7 @@ const Login: React.FC = () => {
 
   return (
     <div className="w-[100vw] min-h-screen flex items-center justify-center bg-gray-900 text-white">
-      <SignIn
+      <SignUp
         appearance={{
           baseTheme: dark,
           variables: {
@@ -29,10 +29,10 @@ const Login: React.FC = () => {
             borderRadius: '0.5rem',
           },
         }}
-        signUpUrl="/signup"
+        signInUrl="/login"
       />
     </div>
   );
 };
 
-export default Login;
+export default Signup;

@@ -6,6 +6,7 @@ import { useAuth } from '@clerk/clerk-react';
 import Layout from './components/Layout';
 import TrackList from './components/TrackList';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { usePlayerStore } from './store/usePlayerStore';
 import { initWebSocket } from './api/websocket';
 
@@ -15,8 +16,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        Loading...
+      <div className="w-screen min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-gray-700 border-t-blue-500 rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-4 text-gray-400 text-lg">Loading...</p>
       </div>
     );
   }
@@ -38,7 +42,7 @@ function App() {
         deviceId = crypto.randomUUID();
       } else {
         // Fallback for non-secure contexts
-        deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
           const r = Math.random() * 16 | 0;
           const v = c === 'x' ? r : (r & 0x3 | 0x8);
           return v.toString(16);
@@ -60,25 +64,26 @@ function App() {
   }, [isSignedIn, getToken, setDeviceId]);
 
   return (
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <Toaster position="top-right" />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <TrackList />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Router>
-      </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Toaster position="top-right" />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TrackList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Router>
+    </QueryClientProvider>
   );
 }
 

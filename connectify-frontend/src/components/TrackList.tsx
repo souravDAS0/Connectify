@@ -5,6 +5,7 @@ import { usePlayerStore } from '../store/usePlayerStore';
 import { sendWebSocketMessage } from '../api/websocket';
 import { Play, Disc } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import LoadingAnimation from './LoadingAnimation';
 
 const TrackList: React.FC = () => {
   const { data: tracks, isLoading, error } = useQuery<Track[]>({
@@ -24,7 +25,7 @@ const TrackList: React.FC = () => {
     sendWebSocketMessage('control:load', { track_id: track.id });
   };
 
-  if (isLoading) return <div className="p-8 text-center text-gray-400">Loading tracks...</div>;
+  if (isLoading) return <LoadingAnimation />;
   if (error) return <div className="p-8 text-center text-red-500">Error loading tracks.</div>;
   if (!tracks) return null;
 
@@ -37,16 +38,15 @@ const TrackList: React.FC = () => {
           <div
             key={track.id}
             onClick={() => handlePlay(track)}
-            className={`group relative bg-gray-900 rounded-lg p-4 hover:bg-gray-800 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl ${
-              currentTrack?.id === track.id ? 'ring-2 ring-green-500' : ''
-            }`}
+            className={`group relative bg-gray-900 rounded-lg p-4 hover:bg-gray-800 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl ${currentTrack?.id === track.id ? 'ring-2 ring-green-500' : ''
+              }`}
           >
             {/* Cover Image */}
             <div className="relative aspect-square mb-4 rounded-md overflow-hidden bg-gray-800 shadow-inner group-hover:shadow-none">
               {track.album_art_url ? (
                 <img
-                  src={track.album_art_url} 
-                  alt={track.title} 
+                  src={track.album_art_url}
+                  alt={track.title}
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                 />
               ) : (
@@ -54,17 +54,16 @@ const TrackList: React.FC = () => {
                   <Disc size={48} />
                 </div>
               )}
-              
+
               {/* Play Overlay */}
-              <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${
-                currentTrack?.id === track.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}>
+              <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${currentTrack?.id === track.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}>
                 <div className="bg-green-500 text-black rounded-full p-3 transform transition-transform duration-300 hover:scale-110 shadow-lg">
                   {currentTrack?.id === track.id && isPlaying ? (
                     <div className="w-6 h-6 flex items-center justify-center gap-1">
-                      <div className="w-1.5 h-6 bg-black animate-music-bar-1"/>
-                      <div className="w-1.5 h-6 bg-black animate-music-bar-2"/>
-                      <div className="w-1.5 h-6 bg-black animate-music-bar-3"/>
+                      <div className="w-1.5 h-6 bg-black animate-music-bar-1" />
+                      <div className="w-1.5 h-6 bg-black animate-music-bar-2" />
+                      <div className="w-1.5 h-6 bg-black animate-music-bar-3" />
                     </div>
                   ) : (
                     <Play size={24} fill="currentColor" />

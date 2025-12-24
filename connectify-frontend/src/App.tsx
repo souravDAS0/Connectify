@@ -7,6 +7,8 @@ import Layout from './components/Layout';
 import TrackList from './components/TrackList';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import TestLoading from './pages/TestLoading';
+// import LoadingAnimation from './components/LoadingAnimation';
 import { usePlayerStore } from './store/usePlayerStore';
 import { initWebSocket } from './api/websocket';
 
@@ -15,6 +17,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isSignedIn, isLoaded } = useAuth();
 
   if (!isLoaded) {
+    // return <LoadingAnimation />;
     return (
       <div className="w-screen min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
         <div className="relative">
@@ -22,7 +25,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         </div>
         <p className="mt-4 text-gray-400 text-lg">Loading...</p>
       </div>
-    );
+    )
+
   }
 
   return isSignedIn ? <>{children}</> : <Navigate to="/login" />;
@@ -70,6 +74,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/test-loading" element={<TestLoading />} />
 
           <Route
             path="/"

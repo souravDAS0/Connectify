@@ -1,15 +1,46 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"strings"
 
+	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/clerk/clerk-sdk-go/v2/jwt"
 	"github.com/gofiber/fiber/v2"
 )
 
-// ClerkAuth middleware validates Clerk JWT tokens
-func ClerkAuth() fiber.Handler {
+// ClerkConfig holds both Clerk secret keys for dual authentication
+type ClerkConfig struct {
+	FrontendSecretKey string
+	AdminSecretKey    string
+}
+
+// VerifyTokenWithBothKeys attempts verification with both Clerk keys
+// This allows the backend to accept tokens from both frontend and admin Clerk apps
+func VerifyTokenWithBothKeys(ctx context.Context, token string, config *ClerkConfig) (*clerk.SessionClaims, error) {
+	// Try with the currently set key first (default frontend key)
+	claims, err := jwt.Verify(ctx, &jwt.VerifyParams{
+		Token: token,
+	})
+	if err == nil {
+		return claims, nil
+	}
+
+	// If verification failed, try with the admin key
+	// Temporarily switch to admin key
+	originalKey := config.FrontendSecretKey
+	clerk.SetKey(config.AdminSecretKey)
+	defer clerk.SetKey(originalKey) // Always restore original key
+
+	claims, err = jwt.Verify(ctx, &jwt.VerifyParams{
+		Token: token,
+	})
+	return claims, err
+}
+
+// ClerkAuth middleware validates Clerk JWT tokens from both Clerk apps
+func ClerkAuth(config *ClerkConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract token from Authorization header
 		authHeader := c.Get("Authorization")
@@ -27,10 +58,8 @@ func ClerkAuth() fiber.Handler {
 			})
 		}
 
-		// Verify token with Clerk
-		claims, err := jwt.Verify(c.Context(), &jwt.VerifyParams{
-			Token: tokenString,
-		})
+		// Verify token with both Clerk keys
+		claims, err := VerifyTokenWithBothKeys(c.Context(), tokenString, config)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid or expired token",
@@ -54,7 +83,7 @@ func ClerkAuth() fiber.Handler {
 }
 
 // ClerkAdminAuth middleware validates token AND checks for admin role
-func ClerkAdminAuth() fiber.Handler {
+func ClerkAdminAuth(config *ClerkConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// First validate token (same as ClerkAuth)
 		authHeader := c.Get("Authorization")
@@ -71,9 +100,8 @@ func ClerkAdminAuth() fiber.Handler {
 			})
 		}
 
-		claims, err := jwt.Verify(c.Context(), &jwt.VerifyParams{
-			Token: tokenString,
-		})
+		// Verify token with both Clerk keys
+		claims, err := VerifyTokenWithBothKeys(c.Context(), tokenString, config)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid or expired token",

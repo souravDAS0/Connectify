@@ -1,13 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useAuth, useUser } from '@clerk/clerk-react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
-import Tracks from './pages/Tracks';
-import Playlists from './pages/Playlists';
-import Users from './pages/Users';
 import AdminLogin from './pages/Login';
+import Playlists from './pages/Playlists';
+import Tracks from './pages/Tracks';
+import Users from './pages/Users';
 
 const queryClient = new QueryClient({
   defaultOptions: {

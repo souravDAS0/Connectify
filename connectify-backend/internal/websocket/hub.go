@@ -331,19 +331,6 @@ func (h *Hub) registerDevice(c *Client) {
 	h.redisClient.Expire(ctx, key, 24*time.Hour)
 }
 
-func (h *Hub) unregisterDevice(c *Client) {
-	ctx := context.Background()
-	key := "user:" + c.UserID + ":devices"
-
-	deviceData := map[string]string{
-		"id":   c.DeviceID,
-		"name": c.DeviceName,
-	}
-
-	bytes, _ := json.Marshal(deviceData)
-	h.redisClient.SRem(ctx, key, string(bytes))
-}
-
 // getActiveDevices fetches all active devices for a user from Redis
 func (h *Hub) getActiveDevices(userID string) ([]DeviceInfo, error) {
 	ctx := context.Background()

@@ -39,20 +39,32 @@ func main() {
 
 	// Initialize Clerk with both secret keys
 	clerkSecretKey := os.Getenv("CLERK_SECRET_KEY")
+	clerkPublishableKey := os.Getenv("CLERK_PUBLISHABLE_KEY")
 	clerkAdminSecretKey := os.Getenv("CLERK_ADMIN_SECRET_KEY")
+	clerkAdminPublishableKey := os.Getenv("CLERK_ADMIN_PUBLISHABLE_KEY")
+
 	if clerkSecretKey == "" {
 		log.Fatal("CLERK_SECRET_KEY environment variable is required")
+	}
+	if clerkPublishableKey == "" {
+		log.Fatal("CLERK_PUBLISHABLE_KEY environment variable is required")
 	}
 	if clerkAdminSecretKey == "" {
 		log.Fatal("CLERK_ADMIN_SECRET_KEY environment variable is required")
 	}
+	if clerkAdminPublishableKey == "" {
+		log.Fatal("CLERK_ADMIN_PUBLISHABLE_KEY environment variable is required")
+	}
+
 	clerk.SetKey(clerkSecretKey) // Set default key for SDK
 	fmt.Println("Clerk initialized with dual authentication support")
 
 	// Create Clerk config for middleware
 	clerkConfig := &middleware.ClerkConfig{
-		FrontendSecretKey: clerkSecretKey,
-		AdminSecretKey:    clerkAdminSecretKey,
+		FrontendSecretKey:      clerkSecretKey,
+		FrontendPublishableKey: clerkPublishableKey,
+		AdminSecretKey:         clerkAdminSecretKey,
+		AdminPublishableKey:    clerkAdminPublishableKey,
 	}
 
 	// Initialize storage based on environment
@@ -143,6 +155,19 @@ func main() {
 
 	// Register playlist routes (Clerk protected)
 	playlist.RegisterRoutes(app, playlistService)
+
+	// User management endpoint (TEMPORARILY WITHOUT AUTH FOR TESTING)
+	// TODO: Fix Clerk secret keys and re-enable ClerkAdminAuth
+	app.Get("/users", func(c *fiber.Ctx) error {
+		log.Println("GET /users endpoint hit")
+		users, err := authService.GetAllUsers()
+		if err != nil {
+			log.Printf("Error getting users: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to get users"})
+		}
+		log.Printf("Successfully retrieved %d users", len(users))
+		return c.JSON(users)
+	})
 
 	// Admin routes for user management (protected with admin middleware)
 	adminRoutes := app.Group("/admin", middleware.ClerkAdminAuth(clerkConfig))

@@ -1,5 +1,6 @@
 import Lottie from 'react-lottie';
-import animationData from '../assets/logo_pulse.json';
+import animationData from '../assets/loading.json';
+
 
 
 
@@ -9,18 +10,19 @@ const LoadingAnimation = () => {
         autoplay: true,
         animationData: animationData,
         rendererSettings: {
-            preserveAspectRatio: "xMidYMid slice"
+            preserveAspectRatio: "xMidYMid meet"
         }
     };
 
     return (
         <div className="w-screen min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-            <Lottie
-                options={defaultOptions}
-                height={400}
-                width={400}
-            />
-            <p className="mt-4 text-gray-400 text-lg">Loading...</p>
+            <div className="w-[60px] h-[60px] md:w-[100px] md:h-[100px]">
+
+                <Lottie
+                    options={defaultOptions}
+                />
+            </div>
+
         </div>
     );
 };

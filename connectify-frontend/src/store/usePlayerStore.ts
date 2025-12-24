@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { Track } from '../types';
+import { create } from "zustand";
+import type { Track } from "../types";
 
 export interface DeviceInfo {
   id: string;
@@ -48,9 +48,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
   setVolume: (volume) => set({ volume }),
-  setPosition: (position) => set((state) => ({
-    position: typeof position === 'function' ? position(state.position) : position
-  })),
+  setPosition: (position) =>
+    set((state) => ({
+      position:
+        typeof position === "function" ? position(state.position) : position,
+    })),
   setSeekTarget: (position) => set({ seekTarget: position }),
   setDeviceId: (id) => set({ deviceId: id }),
   setActiveDeviceId: (id) => set({ activeDeviceId: id }),
@@ -58,25 +60,28 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   addToQueue: (track) => set((state) => ({ queue: [...state.queue, track] })),
   setQueue: (tracks) => set({ queue: tracks }),
-  
+
   nextTrack: () => {
     const { queue, queueIndex } = get();
     if (queueIndex < queue.length - 1) {
-      set({ 
+      set({
         queueIndex: queueIndex + 1,
         currentTrack: queue[queueIndex + 1],
-        isPlaying: true 
+        isPlaying: true,
       });
+    } else {
+      // Last track ended, stop playing
+      set({ isPlaying: false });
     }
   },
 
   prevTrack: () => {
     const { queue, queueIndex } = get();
     if (queueIndex > 0) {
-      set({ 
+      set({
         queueIndex: queueIndex - 1,
         currentTrack: queue[queueIndex - 1],
-        isPlaying: true 
+        isPlaying: true,
       });
     }
   },

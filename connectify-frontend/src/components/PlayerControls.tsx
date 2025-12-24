@@ -133,8 +133,23 @@ const PlayerControls: React.FC = () => {
   };
 
   const handleNext = () => {
+    const { queue, queueIndex } = usePlayerStore.getState();
+    const hasNextTrack = queueIndex < queue.length - 1;
+
     nextTrack();
-    sendWebSocketMessage('control:next', {});
+
+    if (hasNextTrack) {
+      // Moving to next track
+      sendWebSocketMessage('control:next', {});
+    } else {
+      // Last track ended, broadcast stopped state
+      sendWebSocketMessage('playback:update', {
+        track_id: currentTrack?.id,
+        position: 0,
+        playing: false,
+        active_device_id: activeDeviceId || deviceId
+      });
+    }
   };
 
   const handlePrev = () => {

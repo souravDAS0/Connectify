@@ -12,9 +12,9 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="bg-black absolute top-0 left-0 right-0 min-h-screen text-white pb-24">
       {/* Header */}
-      <header className="p-4 flex justify-between items-center border-b border-white/10">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-          Connectify
+      <header className="px-4 py-2 flex justify-between items-center border-b border-white/10">
+        <h1 className="h-[50px] md:h-[60px]">
+          <img src="./amplify_logo.png" alt="amplify logo" className="h-[50px] md:h-[60px]" />
         </h1>
         <UserButton
           appearance={{

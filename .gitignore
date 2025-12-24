@@ -2,3 +2,4 @@ connectify-backend/storage
 connectify-backend/.env
 connectify-admin/.env
 connectify-frontend/.env
+.DS_Store

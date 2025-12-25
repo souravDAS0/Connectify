@@ -1,4 +1,4 @@
-import { Disc, Pause, Play, SkipBack, SkipForward, Volume2, Smartphone } from 'lucide-react';
+import { Disc, Pause, Play, SkipBack, SkipForward, Volume2, Smartphone, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
@@ -28,6 +28,10 @@ const PlayerControls: React.FC = () => {
     seekTarget,
     setSeekTarget,
     activeDevices,
+    repeatMode,
+    isShuffle,
+    cycleRepeatMode,
+    toggleShuffle,
   } = usePlayerStore();
 
   const [showMobileVolume, setShowMobileVolume] = useState(false);
@@ -133,16 +137,34 @@ const PlayerControls: React.FC = () => {
   };
 
   const handleNext = () => {
-    const { queue, queueIndex } = usePlayerStore.getState();
+    const { queue, queueIndex, repeatMode } = usePlayerStore.getState();
     const hasNextTrack = queueIndex < queue.length - 1;
+
+    // Handle repeat one: restart current track
+    if (repeatMode === 'one' && currentTrack) {
+      // Reset position and keep playing
+      usePlayerStore.getState().setPosition(0);
+      if (isActiveDevice && audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+      }
+      // Broadcast the restart
+      sendWebSocketMessage('playback:update', {
+        track_id: currentTrack.id,
+        position: 0,
+        playing: true,
+        active_device_id: activeDeviceId || deviceId
+      });
+      return;
+    }
 
     nextTrack();
 
-    if (hasNextTrack) {
-      // Moving to next track
+    if (hasNextTrack || repeatMode === 'all') {
+      // Moving to next track or looping
       sendWebSocketMessage('control:next', {});
     } else {
-      // Last track ended, broadcast stopped state
+      // Last track ended with repeat off, broadcast stopped state
       sendWebSocketMessage('playback:update', {
         track_id: currentTrack?.id,
         position: 0,
@@ -181,6 +203,18 @@ const PlayerControls: React.FC = () => {
     sendWebSocketMessage('control:seek', { position: newPos });
   };
 
+  const handleToggleShuffle = () => {
+    toggleShuffle();
+    const newShuffleState = usePlayerStore.getState().isShuffle;
+    sendWebSocketMessage('control:shuffle', { shuffle: newShuffleState });
+  };
+
+  const handleCycleRepeat = () => {
+    cycleRepeatMode();
+    const newMode = usePlayerStore.getState().repeatMode;
+    sendWebSocketMessage('control:repeat', { mode: newMode });
+  };
+
   if (!currentTrack) return null;
 
   return (
@@ -205,7 +239,15 @@ const PlayerControls: React.FC = () => {
 
         {/* Controls */}
         <div className="flex flex-col items-center w-1/3">
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleToggleShuffle}
+              className={`transition-colors ${isShuffle ? 'text-blue-500' : 'text-gray-400 hover:text-white'
+                }`}
+              title="Shuffle"
+            >
+              <Shuffle size={20} />
+            </button>
             <button onClick={handlePrev} className="text-gray-400 hover:text-white transition-colors">
               <SkipBack size={24} />
             </button>
@@ -217,6 +259,14 @@ const PlayerControls: React.FC = () => {
             </button>
             <button onClick={handleNext} className="text-gray-400 hover:text-white transition-colors">
               <SkipForward size={24} />
+            </button>
+            <button
+              onClick={handleCycleRepeat}
+              className={`transition-colors ${repeatMode !== 'off' ? 'text-blue-500' : 'text-gray-400 hover:text-white'
+                }`}
+              title={`Repeat: ${repeatMode}`}
+            >
+              {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
             </button>
           </div>
 
@@ -290,10 +340,24 @@ const PlayerControls: React.FC = () => {
 
           <div className="flex items-center space-x-3">
             <button
+              onClick={handleToggleShuffle}
+              className={`transition-colors ${isShuffle ? 'text-blue-500' : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              <Shuffle size={18} />
+            </button>
+            <button
               onClick={togglePlay}
               className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
             >
               {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+            </button>
+            <button
+              onClick={handleCycleRepeat}
+              className={`transition-colors ${repeatMode !== 'off' ? 'text-blue-500' : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
             </button>
 
             <button

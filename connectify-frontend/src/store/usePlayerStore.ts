@@ -40,6 +40,7 @@ interface PlayerState {
   setRepeatMode: (mode: RepeatMode) => void;
   toggleShuffle: () => void;
   setIsShuffle: (shuffle: boolean) => void;
+  removeFromQueue: (trackId: string) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -162,4 +163,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   setIsShuffle: (shuffle) => set({ isShuffle: shuffle }),
+
+  removeFromQueue: (trackId) => {
+    const { queue, queueIndex } = get();
+    const index = queue.findIndex((t) => t.id === trackId);
+    if (index === -1) return;
+
+    const newQueue = queue.filter((t) => t.id !== trackId);
+
+    // Adjust queueIndex if we removed a track before or at the current position
+    let newQueueIndex = queueIndex;
+    if (index < queueIndex) {
+      newQueueIndex = queueIndex - 1;
+    } else if (index === queueIndex) {
+      // Removed current track - stay at same index (next track slides into position)
+      newQueueIndex = Math.min(queueIndex, newQueue.length - 1);
+    }
+
+    set({
+      queue: newQueue,
+      queueIndex: newQueueIndex >= 0 ? newQueueIndex : -1,
+    });
+  },
 }));

@@ -1,9 +1,10 @@
-import { Disc, Pause, Play, SkipBack, SkipForward, Volume2, Smartphone, Shuffle, Repeat, Repeat1 } from 'lucide-react';
+import { Disc, Pause, Play, SkipBack, SkipForward, Volume2, Smartphone, Shuffle, Repeat, Repeat1, ListMusic } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
 import { usePlayerStore } from '../store/usePlayerStore';
 import ActiveDevicesModal from './ActiveDevicesModal';
+import QueuePanel from './QueuePanel';
 
 const formatTime = (seconds: number) => {
   if (!seconds) return '0:00';
@@ -32,10 +33,12 @@ const PlayerControls: React.FC = () => {
     isShuffle,
     cycleRepeatMode,
     toggleShuffle,
+    queue,
   } = usePlayerStore();
 
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const [showDevicesModal, setShowDevicesModal] = useState(false);
+  const [showQueuePanel, setShowQueuePanel] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
 
@@ -232,9 +235,23 @@ const PlayerControls: React.FC = () => {
       {/* Desktop Layout */}
       <div className="hidden md:flex max-w-7xl mx-auto items-center justify-between h-full">
         {/* Track Info */}
-        <div className="w-1/3">
-          <h3 className="text-white font-medium truncate">{currentTrack.title}</h3>
-          <p className="text-gray-400 text-sm truncate">{currentTrack.artist}</p>
+        <div className="w-10 h-10 rounded overflow-hidden bg-gray-700 mr-2">
+          {currentTrack.album_art_url ? (
+            <img
+              src={currentTrack.album_art_url}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-600">
+              <Disc size={20} />
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 pr-4">
+          <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
+          <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
         </div>
 
         {/* Controls */}
@@ -288,6 +305,18 @@ const PlayerControls: React.FC = () => {
 
         {/* Volume & Devices */}
         <div className="flex items-center justify-end w-1/3 space-x-4">
+          <button
+            onClick={() => setShowQueuePanel(true)}
+            className="text-gray-400 hover:text-white transition-colors relative"
+            title="View queue"
+          >
+            <ListMusic size={20} />
+            {queue.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {queue.length}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => setShowDevicesModal(true)}
             className="text-gray-400 hover:text-white transition-colors relative"
@@ -422,6 +451,12 @@ const PlayerControls: React.FC = () => {
       <ActiveDevicesModal
         isOpen={showDevicesModal}
         onClose={() => setShowDevicesModal(false)}
+      />
+
+      {/* Queue Panel */}
+      <QueuePanel
+        isOpen={showQueuePanel}
+        onClose={() => setShowQueuePanel(false)}
       />
     </div>
   );

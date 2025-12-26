@@ -8,6 +8,7 @@ import TrackList from './components/TrackList';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import TestLoading from './pages/TestLoading';
+import NowPlayingPage from './pages/NowPlayingPage';
 import LoadingAnimation from './components/LoadingAnimation';
 import { usePlayerStore } from './store/usePlayerStore';
 import { initWebSocket } from './api/websocket';
@@ -83,6 +84,16 @@ function App() {
                 <Layout>
                   <TrackList />
                 </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Mobile Now Playing expanded view */}
+          <Route
+            path="/now-playing/:id"
+            element={
+              <ProtectedRoute>
+                <NowPlayingPage />
               </ProtectedRoute>
             }
           />

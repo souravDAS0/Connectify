@@ -1,5 +1,6 @@
 import { Disc, Pause, Play, SkipBack, SkipForward, Volume2, Smartphone, Shuffle, Repeat, Repeat1, ListMusic } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
 import { usePlayerStore } from '../store/usePlayerStore';
@@ -36,11 +37,11 @@ const PlayerControls: React.FC = () => {
     queue,
   } = usePlayerStore();
 
-  const [showMobileVolume, setShowMobileVolume] = useState(false);
   const [showDevicesModal, setShowDevicesModal] = useState(false);
   const [showQueuePanel, setShowQueuePanel] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
+  const navigate = useNavigate();
 
   // Check if this device is the active player
   const isActiveDevice = deviceId && deviceId === activeDeviceId;
@@ -344,90 +345,76 @@ const PlayerControls: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Layout */}
-      <div className="md:hidden flex flex-col h-full justify-between pb-1">
+      {/* Mobile Layout - Simplified mini-player */}
+      <div className="md:hidden flex flex-col h-full justify-between py-2">
         {/* Top Row: Info + Controls */}
-        <div className="flex items-center justify-between mb-2">
-          <div className='w-[32px] h-[32px] mr-2'>
-            {currentTrack.album_art_url ? (
-              <img
-                src={currentTrack.album_art_url}
-                alt={currentTrack.title}
-                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-600">
-                <Disc size={24} />
-              </div>
-            )}
+        <div className="flex items-center">
+          {/* Clickable area to open expanded view */}
+          <div
+            className="flex items-center flex-1 min-w-0 cursor-pointer"
+            onClick={() => navigate(`/now-playing/${currentTrack.id}`)}
+          >
+            <div className='w-[44px] h-[44px] mr-3 rounded overflow-hidden bg-gray-800 flex-shrink-0'>
+              {currentTrack.album_art_url ? (
+                <img
+                  src={currentTrack.album_art_url}
+                  alt={currentTrack.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600">
+                  <Disc size={24} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0 pr-4">
+              <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
+              <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
+            </div>
           </div>
 
-          <div className="flex-1 min-w-0 pr-4">
-            <h3 className="text-white font-medium truncate text-sm">{currentTrack.title}</h3>
-            <p className="text-gray-400 text-xs truncate">{currentTrack.artist}</p>
-          </div>
-
+          {/* Controls */}
           <div className="flex items-center space-x-3">
             <button
-              onClick={handleToggleShuffle}
-              className={`transition-colors ${isShuffle ? 'text-blue-500' : 'text-gray-400 hover:text-white'
-                }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePlay();
+              }}
+              className="bg-white rounded-full p-2 text-black"
             >
-              <Shuffle size={18} />
-            </button>
-            <button
-              onClick={togglePlay}
-              className="bg-blue-600 rounded-full p-2 hover:bg-blue-700 transition-colors text-white"
-            >
-              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-            </button>
-            <button
-              onClick={handleCycleRepeat}
-              className={`transition-colors ${repeatMode !== 'off' ? 'text-blue-500' : 'text-gray-400 hover:text-white'
-                }`}
-            >
-              {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
+              {isPlaying ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
             </button>
 
             <button
-              onClick={() => setShowDevicesModal(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNext();
+              }}
+              className="text-white hover:text-gray-300 transition-colors"
+            >
+              <SkipForward size={26} fill="currentColor" />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDevicesModal(true);
+              }}
               className="text-gray-400 hover:text-white transition-colors relative"
             >
-              <Smartphone size={20} />
+              <Smartphone size={22} />
               {activeDevices.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                   {activeDevices.length}
                 </span>
               )}
             </button>
-
-            <div className="relative">
-              <button
-                onClick={() => setShowMobileVolume(!showMobileVolume)}
-                className={`transition-colors ${showMobileVolume ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
-              >
-                <Volume2 size={20} />
-              </button>
-              {/* Mobile Volume Popup */}
-              {showMobileVolume && (
-                <div className="absolute  right-2 bottom-[72px] -rotate-90 -translate-y-1/2 translate-x-1/2  bg-gray-800 p-3 rounded-lg shadow-xl border border-gray-700 flex flex-col items-center min-w-[20px] ">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={volume}
-                    onChange={handleVolumeChange}
-                    className="w-24 h-2 accent-blue-600 appearance-auto cursor-pointer"
-                  />
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full mb-1 flex flex-1 justify-between items-center gap-1">
+        <div className="w-full mt-2 flex items-center gap-2">
           <input
             type="range"
             min={0}
@@ -436,9 +423,9 @@ const PlayerControls: React.FC = () => {
             onChange={handleSeek}
             onMouseUp={handleSeekEnd}
             onTouchEnd={handleSeekEnd}
-            className="w-[80%] h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+            className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
           />
-          <span className="text-gray-400 text-xs">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
+          <span className="text-gray-400 text-xs flex-shrink-0">{formatTime(position / 1000)} / {formatTime(currentTrack.duration)}</span>
         </div>
 
         {/* Time Display

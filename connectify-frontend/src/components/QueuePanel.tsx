@@ -27,8 +27,11 @@ const QueuePanel: React.FC<QueuePanelProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
             />
 
-            {/* Panel */}
-            <div className="fixed right-0 top-0 bottom-24 w-full max-w-md bg-gray-900 border-l border-gray-800 z-50 flex flex-col shadow-2xl animate-slide-in-right">
+            {/* Panel - slides up on mobile, slides right on desktop */}
+            <div className="fixed z-50 flex flex-col shadow-2xl bg-gray-900
+                            md:right-0 md:top-0 md:bottom-24 md:w-full md:max-w-md md:border-l md:border-gray-800 md:animate-slide-in-right
+                            left-0 right-0 bottom-0 top-20 rounded-t-2xl animate-slide-up md:rounded-none"
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-800">
                     <div className="flex items-center gap-3">

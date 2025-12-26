@@ -145,7 +145,14 @@ func (h *Hub) Run() {
 		if newState.ActiveDeviceID != "" {
 			currentState.ActiveDeviceID = newState.ActiveDeviceID
 		}
-		// ... sync other fields if needed
+		// Sync shuffle state (explicit boolean check)
+		if newState.Shuffle != currentState.Shuffle {
+			currentState.Shuffle = newState.Shuffle
+		}
+		// Sync repeat mode
+		if newState.Repeat != "" {
+			currentState.Repeat = newState.Repeat
+		}
 
 		// Save back
 		data, _ := json.Marshal(currentState)
@@ -329,19 +336,6 @@ func (h *Hub) registerDevice(c *Client) {
 	h.redisClient.SAdd(ctx, key, string(bytes))
 	// Set expiry for the set to auto-cleanup inactive users' device lists
 	h.redisClient.Expire(ctx, key, 24*time.Hour)
-}
-
-func (h *Hub) unregisterDevice(c *Client) {
-	ctx := context.Background()
-	key := "user:" + c.UserID + ":devices"
-
-	deviceData := map[string]string{
-		"id":   c.DeviceID,
-		"name": c.DeviceName,
-	}
-
-	bytes, _ := json.Marshal(deviceData)
-	h.redisClient.SRem(ctx, key, string(bytes))
 }
 
 // getActiveDevices fetches all active devices for a user from Redis
@@ -651,16 +645,36 @@ func (c *Client) readPump() {
 			c.hub.publishToRedis(c.UserID, wrapper)
 
 		case "control:shuffle":
+			// Extract shuffle state and save to Redis
 			stateData, _ := json.Marshal(msg.Data)
-			var state PlaybackState
-			json.Unmarshal(stateData, &state)
-			c.hub.publishToRedis(c.UserID, state)
+			var shuffleData map[string]interface{}
+			json.Unmarshal(stateData, &shuffleData)
+
+			if shuffle, ok := shuffleData["shuffle"].(bool); ok {
+				// Save to playback state
+				state := PlaybackState{Shuffle: shuffle}
+				c.hub.publishToRedis(c.UserID, state)
+			}
+
+			// Also broadcast the control message for immediate UI update
+			wrapper := Message{Type: "control:shuffle", Data: msg.Data}
+			c.hub.publishToRedis(c.UserID, wrapper)
 
 		case "control:repeat":
+			// Extract repeat mode and save to Redis
 			stateData, _ := json.Marshal(msg.Data)
-			var state PlaybackState
-			json.Unmarshal(stateData, &state)
-			c.hub.publishToRedis(c.UserID, state)
+			var repeatData map[string]interface{}
+			json.Unmarshal(stateData, &repeatData)
+
+			if mode, ok := repeatData["mode"].(string); ok {
+				// Save to playback state
+				state := PlaybackState{Repeat: mode}
+				c.hub.publishToRedis(c.UserID, state)
+			}
+
+			// Also broadcast the control message for immediate UI update
+			wrapper := Message{Type: "control:repeat", Data: msg.Data}
+			c.hub.publishToRedis(c.UserID, wrapper)
 
 		case "device:set_active":
 			stateData, _ := json.Marshal(msg.Data)

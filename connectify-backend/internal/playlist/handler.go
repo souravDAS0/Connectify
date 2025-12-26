@@ -74,6 +74,7 @@ func RegisterRoutes(app *fiber.App, service *PlaylistService) {
 		delete(updates, "id")
 		delete(updates, "track_ids") // Use dedicated endpoints for managing tracks
 		delete(updates, "created_at")
+		delete(updates, "created_by") // Creator cannot be changed
 
 		updated, err := service.UpdatePlaylist(id, updates)
 		if err != nil {

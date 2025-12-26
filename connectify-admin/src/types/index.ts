@@ -23,13 +23,29 @@ export interface Playlist {
   track_ids: string[];
   cover_art?: string;
   is_public: boolean;
+  created_by?: string; // User ID who created the playlist
   created_at: string;
   updated_at: string;
 }
 
 export interface User {
   id: string;
-  email: string;
+  first_name: string;
+  last_name: string;
+  email_addresses: Array<{
+    id: string;
+    email_address: string;
+    verification: {
+      status: string;
+    };
+  }>;
+  primary_email_address_id: string;
+  image_url: string;
+  created_at: number;
+  updated_at: number;
+  last_sign_in_at: number;
+  // Legacy compatibility
+  email?: string;
 }
 
 export interface AnalyticsStats {

@@ -7,6 +7,12 @@ import Layout from './components/Layout';
 import TrackList from './components/TrackList';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import TestLoading from './pages/TestLoading';
+import NowPlayingPage from './pages/NowPlayingPage';
+import PlaylistsPage from './pages/PlaylistsPage';
+import PlaylistDetailPage from './pages/PlaylistDetailPage';
+import LoadingAnimation from './components/LoadingAnimation';
+import AudioProvider from './components/AudioProvider';
 import { usePlayerStore } from './store/usePlayerStore';
 import { initWebSocket } from './api/websocket';
 
@@ -15,6 +21,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isSignedIn, isLoaded } = useAuth();
 
   if (!isLoaded) {
+    return <LoadingAnimation />;
     return (
       <div className="w-screen min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
         <div className="relative">
@@ -22,7 +29,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         </div>
         <p className="mt-4 text-gray-400 text-lg">Loading...</p>
       </div>
-    );
+    )
+
   }
 
   return isSignedIn ? <>{children}</> : <Navigate to="/login" />;
@@ -65,24 +73,60 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Toaster position="top-right" />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+      <AudioProvider>
+        <Router>
+          <Toaster position="top-right" />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/test-loading" element={<TestLoading />} />
 
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TrackList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TrackList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Mobile Now Playing expanded view */}
+            <Route
+              path="/now-playing/:id"
+              element={
+                <ProtectedRoute>
+                  <NowPlayingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Playlists */}
+            <Route
+              path="/playlists"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PlaylistsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/playlists/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PlaylistDetailPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </AudioProvider>
     </QueryClientProvider>
   );
 }

@@ -1,11 +1,13 @@
-import { create } from 'zustand';
-import type { Track } from '../types';
+import { create } from "zustand";
+import type { Track } from "../types";
 
 export interface DeviceInfo {
   id: string;
   name: string;
   isActive: boolean;
 }
+
+export type RepeatMode = "off" | "all" | "one";
 
 interface PlayerState {
   currentTrack: Track | null;
@@ -18,6 +20,10 @@ interface PlayerState {
   activeDeviceId: string | null;
   seekTarget: number | null;
   activeDevices: DeviceInfo[];
+  repeatMode: RepeatMode;
+  isShuffle: boolean;
+  originalQueue: Track[];
+  isNowPlayingExpanded: boolean;
 
   setCurrentTrack: (track: Track) => void;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -31,6 +37,12 @@ interface PlayerState {
   setDeviceId: (id: string) => void;
   setActiveDeviceId: (id: string) => void;
   setActiveDevices: (devices: DeviceInfo[]) => void;
+  cycleRepeatMode: () => void;
+  setRepeatMode: (mode: RepeatMode) => void;
+  toggleShuffle: () => void;
+  setIsShuffle: (shuffle: boolean) => void;
+  removeFromQueue: (trackId: string) => void;
+  setIsNowPlayingExpanded: (expanded: boolean) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -44,13 +56,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   deviceId: null,
   activeDeviceId: null, // If null, assume this device or none?
   activeDevices: [],
+  repeatMode: "off",
+  isShuffle: false,
+  originalQueue: [],
+  isNowPlayingExpanded: false,
 
   setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
   setVolume: (volume) => set({ volume }),
-  setPosition: (position) => set((state) => ({
-    position: typeof position === 'function' ? position(state.position) : position
-  })),
+  setPosition: (position) =>
+    set((state) => ({
+      position:
+        typeof position === "function" ? position(state.position) : position,
+    })),
   setSeekTarget: (position) => set({ seekTarget: position }),
   setDeviceId: (id) => set({ deviceId: id }),
   setActiveDeviceId: (id) => set({ activeDeviceId: id }),
@@ -58,26 +76,118 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   addToQueue: (track) => set((state) => ({ queue: [...state.queue, track] })),
   setQueue: (tracks) => set({ queue: tracks }),
-  
+
   nextTrack: () => {
-    const { queue, queueIndex } = get();
+    const { queue, queueIndex, repeatMode } = get();
+
+    // Move to next track if available
     if (queueIndex < queue.length - 1) {
-      set({ 
+      set({
         queueIndex: queueIndex + 1,
         currentTrack: queue[queueIndex + 1],
-        isPlaying: true 
+        isPlaying: true,
       });
+    } else if (repeatMode === "all" && queue.length > 0) {
+      // Repeat all: loop back to first track
+      set({
+        queueIndex: 0,
+        currentTrack: queue[0],
+        isPlaying: true,
+      });
+    } else {
+      // Last track ended, stop playing
+      set({ isPlaying: false });
     }
   },
 
   prevTrack: () => {
     const { queue, queueIndex } = get();
     if (queueIndex > 0) {
-      set({ 
+      set({
         queueIndex: queueIndex - 1,
         currentTrack: queue[queueIndex - 1],
-        isPlaying: true 
+        isPlaying: true,
       });
     }
+  },
+
+  cycleRepeatMode: () => {
+    const { repeatMode } = get();
+    const modes: RepeatMode[] = ["off", "all", "one"];
+    const currentIndex = modes.indexOf(repeatMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    set({ repeatMode: nextMode });
+  },
+
+  setRepeatMode: (mode) => set({ repeatMode: mode }),
+
+  toggleShuffle: () => {
+    const { isShuffle, queue, originalQueue, currentTrack, queueIndex } = get();
+
+    if (!isShuffle) {
+      // Shuffle: save original queue and randomize
+      const newQueue = [...queue];
+      const currentIndex = queueIndex;
+
+      // Remove current track from shuffling
+      if (currentIndex >= 0) {
+        newQueue.splice(currentIndex, 1);
+      }
+
+      // Fisher-Yates shuffle
+      for (let i = newQueue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newQueue[i], newQueue[j]] = [newQueue[j], newQueue[i]];
+      }
+
+      // Re-insert current track at the beginning
+      if (currentTrack && currentIndex >= 0) {
+        newQueue.unshift(currentTrack);
+      }
+
+      set({
+        originalQueue: queue,
+        queue: newQueue,
+        queueIndex: currentTrack ? 0 : -1,
+        isShuffle: true,
+      });
+    } else {
+      // Unshuffle: restore original queue
+      const originalIndex = originalQueue.findIndex(
+        (track) => track.id === currentTrack?.id
+      );
+
+      set({
+        queue: originalQueue,
+        queueIndex: originalIndex >= 0 ? originalIndex : queueIndex,
+        isShuffle: false,
+      });
+    }
+  },
+
+  setIsShuffle: (shuffle) => set({ isShuffle: shuffle }),
+  setIsNowPlayingExpanded: (expanded) =>
+    set({ isNowPlayingExpanded: expanded }),
+
+  removeFromQueue: (trackId) => {
+    const { queue, queueIndex } = get();
+    const index = queue.findIndex((t) => t.id === trackId);
+    if (index === -1) return;
+
+    const newQueue = queue.filter((t) => t.id !== trackId);
+
+    // Adjust queueIndex if we removed a track before or at the current position
+    let newQueueIndex = queueIndex;
+    if (index < queueIndex) {
+      newQueueIndex = queueIndex - 1;
+    } else if (index === queueIndex) {
+      // Removed current track - stay at same index (next track slides into position)
+      newQueueIndex = Math.min(queueIndex, newQueue.length - 1);
+    }
+
+    set({
+      queue: newQueue,
+      queueIndex: newQueueIndex >= 0 ? newQueueIndex : -1,
+    });
   },
 }));

@@ -1,48 +1,29 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPlaylists, deletePlaylist } from '../api/playlists';
-import PlaylistModal from '../components/PlaylistModal';
-import toast from 'react-hot-toast';
-import { ListMusic, Trash2, Plus, Edit } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { getPlaylists } from '../api/playlists';
+import { ListMusic, ChevronRight, Calendar } from 'lucide-react';
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
 
 export default function Playlists() {
-  const queryClient = useQueryClient();
-  const [playlistModalOpen, setPlaylistModalOpen] = useState(false);
-  const [editPlaylistId, setEditPlaylistId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const { data: playlists, isLoading } = useQuery({
     queryKey: ['playlists'],
     queryFn: getPlaylists,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePlaylist,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
-      toast.success('Playlist deleted successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete playlist');
-    },
-  });
-
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      deleteMutation.mutate(id);
-    }
-  };
-
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Playlists</h1>
-        <button
-          onClick={() => setPlaylistModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          <Plus size={20} />
-          Create Playlist
-        </button>
+        <p className="text-gray-500">View all user playlists</p>
       </div>
 
       {isLoading ? (
@@ -50,68 +31,86 @@ export default function Playlists() {
           <div className="text-gray-500">Loading playlists...</div>
         </div>
       ) : playlists && playlists.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {playlists.map((playlist) => (
-            <div key={playlist.id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center flex-1">
-                  <ListMusic className="text-gray-400 mr-3" size={24} />
-                  <div>
-                    <h3 className="font-medium text-gray-900">{playlist.name}</h3>
-                    {playlist.description && (
-                      <p className="text-sm text-gray-500 mt-1">{playlist.description}</p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-2">
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Playlist
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tracks
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Updated
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {playlists.map((playlist) => (
+                <tr
+                  key={playlist.id}
+                  onClick={() => navigate(`/playlists/${playlist.id}`)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mr-4">
+                        <ListMusic size={24} className="text-white" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{playlist.name}</div>
+                        {playlist.description && (
+                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                            {playlist.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {playlist.track_ids.length} tracks
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditPlaylistId(playlist.id)}
-                    className="text-blue-600 hover:text-blue-900"
-                    title="Edit playlist"
-                  >
-                    <Edit size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(playlist.id, playlist.name)}
-                    className="text-red-600 hover:text-red-900"
-                    title="Delete playlist"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={14} />
+                      {formatDate(playlist.created_at)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(playlist.updated_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/playlists/${playlist.id}`);
+                      }}
+                      className="text-blue-600 hover:text-blue-900 flex items-center gap-1 ml-auto"
+                    >
+                      View Details
+                      <ChevronRight size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <ListMusic className="mx-auto text-gray-400 mb-4" size={48} />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No playlists yet</h3>
-          <p className="text-gray-500 mb-4">Create your first playlist to get started</p>
-          <button
-            onClick={() => setPlaylistModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            <Plus size={20} />
-            Create Playlist
-          </button>
+          <p className="text-gray-500">Users haven't created any playlists yet.</p>
         </div>
-      )}
-
-      <PlaylistModal
-        isOpen={playlistModalOpen}
-        onClose={() => setPlaylistModalOpen(false)}
-      />
-
-      {editPlaylistId && (
-        <PlaylistModal
-          playlistId={editPlaylistId}
-          isOpen={!!editPlaylistId}
-          onClose={() => setEditPlaylistId(null)}
-        />
       )}
     </div>
   );

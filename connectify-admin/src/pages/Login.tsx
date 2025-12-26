@@ -18,7 +18,13 @@ const AdminLogin = () => {
         <h1 className="text-2xl font-bold mb-4 text-center text-gray-800">
           Admin Portal
         </h1>
-        <SignIn routing="path" path="/login" />
+        <SignIn
+          appearance={{
+            elements: {
+              footer: { display: 'none' }
+            }
+          }}
+        />
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/Login';
 import Playlists from './pages/Playlists';
+import PlaylistDetail from './pages/PlaylistDetail';
 import Tracks from './pages/Tracks';
 import Users from './pages/Users';
 
@@ -71,6 +72,7 @@ function App() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/tracks" element={<Tracks />} />
                       <Route path="/playlists" element={<Playlists />} />
+                      <Route path="/playlists/:id" element={<PlaylistDetail />} />
                       <Route path="/users" element={<Users />} />
                     </Routes>
                   </main>

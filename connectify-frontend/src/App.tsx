@@ -9,6 +9,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import TestLoading from './pages/TestLoading';
 import NowPlayingPage from './pages/NowPlayingPage';
+import PlaylistsPage from './pages/PlaylistsPage';
+import PlaylistDetailPage from './pages/PlaylistDetailPage';
 import LoadingAnimation from './components/LoadingAnimation';
 import AudioProvider from './components/AudioProvider';
 import { usePlayerStore } from './store/usePlayerStore';
@@ -96,6 +98,29 @@ function App() {
               element={
                 <ProtectedRoute>
                   <NowPlayingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Playlists */}
+            <Route
+              path="/playlists"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PlaylistsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/playlists/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PlaylistDetailPage />
+                  </Layout>
                 </ProtectedRoute>
               }
             />

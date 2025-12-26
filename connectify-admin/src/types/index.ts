@@ -23,6 +23,7 @@ export interface Playlist {
   track_ids: string[];
   cover_art?: string;
   is_public: boolean;
+  created_by?: string; // User ID who created the playlist
   created_at: string;
   updated_at: string;
 }

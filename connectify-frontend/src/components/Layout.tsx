@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { UserButton } from '@clerk/clerk-react';
+import { Link, useLocation } from 'react-router-dom';
 import PlayerControls from './PlayerControls';
 import { dark } from "@clerk/themes";
+import { Music, ListMusic } from 'lucide-react';
 
 
 interface LayoutProps {
@@ -9,13 +11,41 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const location = useLocation();
+
   return (
     <div className="bg-black absolute top-0 left-0 right-0 min-h-screen text-white pb-24">
       {/* Header */}
       <header className="px-4 py-2 flex justify-between items-center border-b border-white/10">
-        <h1 className="h-[50px] md:h-[60px]">
-          <img src="./amplify_logo.png" alt="amplify logo" className="h-[50px] md:h-[60px]" />
-        </h1>
+        <div className="flex items-center gap-6">
+          <h1 className="h-[50px] md:h-[60px]">
+            <img src="/amplify_logo.png" alt="amplify logo" className="h-[50px] md:h-[60px]" />
+          </h1>
+
+          {/* Navigation Tabs */}
+          <nav className="hidden md:flex items-center gap-1">
+            <Link
+              to="/"
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${location.pathname === '/'
+                ? 'bg-white/10 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+            >
+              <Music size={18} />
+              Library
+            </Link>
+            <Link
+              to="/playlists"
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${location.pathname.startsWith('/playlists')
+                ? 'bg-white/10 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+            >
+              <ListMusic size={18} />
+              Playlists
+            </Link>
+          </nav>
+        </div>
         <UserButton
           appearance={{
             baseTheme: dark,
@@ -146,6 +176,30 @@ const Layout = ({ children }: LayoutProps) => {
           }}
         />
       </header>
+
+      {/* Mobile Navigation Tabs */}
+      <nav className="md:hidden flex border-b border-white/10">
+        <Link
+          to="/"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${location.pathname === '/'
+              ? 'text-white border-b-2 border-green-500'
+              : 'text-gray-400'
+            }`}
+        >
+          <Music size={18} />
+          Library
+        </Link>
+        <Link
+          to="/playlists"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${location.pathname.startsWith('/playlists')
+              ? 'text-white border-b-2 border-green-500'
+              : 'text-gray-400'
+            }`}
+        >
+          <ListMusic size={18} />
+          Playlists
+        </Link>
+      </nav>
 
       {/* pb-24 ensures content isn't hidden behind fixed player */}
       <main>

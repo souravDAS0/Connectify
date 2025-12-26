@@ -1,4 +1,4 @@
-import { ChevronUp, Disc, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Smartphone, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Disc, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Smartphone, Volume2, VolumeX } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendWebSocketMessage } from '../api/websocket';
@@ -28,9 +28,10 @@ const PlayerControls: React.FC = () => {
     activeDevices,
     repeatMode,
     isShuffle,
+    isNowPlayingExpanded,
     cycleRepeatMode,
     toggleShuffle,
-    queue,
+    setIsNowPlayingExpanded,
   } = usePlayerStore();
 
   const [showDevicesModal, setShowDevicesModal] = useState(false);
@@ -159,7 +160,7 @@ const PlayerControls: React.FC = () => {
           {/* Center: Track Info (clickable to expand) */}
           <div
             className="flex flex-1 items-center cursor-pointer hover:bg-white/5 rounded-lg px-3 py-1 transition-colors"
-            onClick={() => navigate(`/now-playing/${currentTrack.id}`)}
+            onClick={() => setIsNowPlayingExpanded(!isNowPlayingExpanded)}
           >
             <div className="w-10 h-10 rounded overflow-hidden bg-gray-700 mr-3 flex-shrink-0">
               {currentTrack.album_art_url ? (
@@ -236,7 +237,7 @@ const PlayerControls: React.FC = () => {
               <Shuffle size={20} />
             </button>
 
-            {/* Queue */}
+            {/* Queue
             <button
               onClick={() => setShowQueuePanel(true)}
               className="text-gray-400 hover:text-white transition-colors relative"
@@ -248,7 +249,7 @@ const PlayerControls: React.FC = () => {
                   {queue.length}
                 </span>
               )}
-            </button>
+            </button> */}
 
             {/* Devices */}
             <button
@@ -266,11 +267,13 @@ const PlayerControls: React.FC = () => {
 
             {/* Expand to Now Playing */}
             <button
-              onClick={() => navigate(`/now-playing/${currentTrack.id}`)}
+              onClick={() => setIsNowPlayingExpanded(!isNowPlayingExpanded)}
               className="text-gray-400 hover:text-white transition-colors"
               title="Expand"
             >
-              <ChevronUp size={24} />
+              {
+                isNowPlayingExpanded ? <ChevronDown size={24} /> : <ChevronUp size={24} />
+              }
             </button>
           </div>
         </div>

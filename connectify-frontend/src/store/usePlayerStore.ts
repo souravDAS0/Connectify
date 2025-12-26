@@ -23,6 +23,7 @@ interface PlayerState {
   repeatMode: RepeatMode;
   isShuffle: boolean;
   originalQueue: Track[];
+  isNowPlayingExpanded: boolean;
 
   setCurrentTrack: (track: Track) => void;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -41,6 +42,7 @@ interface PlayerState {
   toggleShuffle: () => void;
   setIsShuffle: (shuffle: boolean) => void;
   removeFromQueue: (trackId: string) => void;
+  setIsNowPlayingExpanded: (expanded: boolean) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -57,6 +59,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   repeatMode: "off",
   isShuffle: false,
   originalQueue: [],
+  isNowPlayingExpanded: false,
 
   setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -163,6 +166,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   setIsShuffle: (shuffle) => set({ isShuffle: shuffle }),
+  setIsNowPlayingExpanded: (expanded) =>
+    set({ isNowPlayingExpanded: expanded }),
 
   removeFromQueue: (trackId) => {
     const { queue, queueIndex } = get();

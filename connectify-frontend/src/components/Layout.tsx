@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import { UserButton } from '@clerk/clerk-react';
 import { Link, useLocation } from 'react-router-dom';
 import PlayerControls from './PlayerControls';
+import NowPlayingOverlay from './NowPlayingOverlay';
 import { dark } from "@clerk/themes";
 import { Music, ListMusic } from 'lucide-react';
+import { usePlayerStore } from '../store/usePlayerStore';
 
 
 interface LayoutProps {
@@ -12,11 +14,12 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
+  const { isNowPlayingExpanded, setIsNowPlayingExpanded } = usePlayerStore();
 
   return (
     <div className="bg-black absolute top-0 left-0 right-0 min-h-screen text-white pb-24">
       {/* Header */}
-      <header className="px-4 py-2 flex justify-between items-center border-b border-white/10">
+      <header className="sticky top-0 z-30 bg-black px-4 py-2 flex justify-between items-center border-b border-white/10">
         <div className="flex items-center gap-6">
           <h1 className="h-[50px] md:h-[60px]">
             <img src="/amplify_logo.png" alt="amplify logo" className="h-[50px] md:h-[60px]" />
@@ -182,8 +185,8 @@ const Layout = ({ children }: LayoutProps) => {
         <Link
           to="/"
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${location.pathname === '/'
-              ? 'text-white border-b-2 border-green-500'
-              : 'text-gray-400'
+            ? 'text-white border-b-2 border-green-500'
+            : 'text-gray-400'
             }`}
         >
           <Music size={18} />
@@ -192,8 +195,8 @@ const Layout = ({ children }: LayoutProps) => {
         <Link
           to="/playlists"
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${location.pathname.startsWith('/playlists')
-              ? 'text-white border-b-2 border-green-500'
-              : 'text-gray-400'
+            ? 'text-white border-b-2 border-green-500'
+            : 'text-gray-400'
             }`}
         >
           <ListMusic size={18} />
@@ -206,8 +209,15 @@ const Layout = ({ children }: LayoutProps) => {
         {children}
       </main>
       <PlayerControls />
+
+      {/* Desktop NowPlaying Overlay */}
+      <NowPlayingOverlay
+        isOpen={isNowPlayingExpanded}
+        onClose={() => setIsNowPlayingExpanded(false)}
+      />
     </div>
   );
 };
 
 export default Layout;
+

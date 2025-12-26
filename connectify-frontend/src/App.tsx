@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import TestLoading from './pages/TestLoading';
 import NowPlayingPage from './pages/NowPlayingPage';
 import LoadingAnimation from './components/LoadingAnimation';
+import AudioProvider from './components/AudioProvider';
 import { usePlayerStore } from './store/usePlayerStore';
 import { initWebSocket } from './api/websocket';
 
@@ -70,35 +71,37 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Toaster position="top-right" />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/test-loading" element={<TestLoading />} />
+      <AudioProvider>
+        <Router>
+          <Toaster position="top-right" />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/test-loading" element={<TestLoading />} />
 
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TrackList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TrackList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Mobile Now Playing expanded view */}
-          <Route
-            path="/now-playing/:id"
-            element={
-              <ProtectedRoute>
-                <NowPlayingPage />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
+            {/* Mobile Now Playing expanded view */}
+            <Route
+              path="/now-playing/:id"
+              element={
+                <ProtectedRoute>
+                  <NowPlayingPage />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </AudioProvider>
     </QueryClientProvider>
   );
 }

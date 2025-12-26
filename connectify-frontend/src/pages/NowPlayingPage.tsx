@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronDown,
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { sendWebSocketMessage } from '../api/websocket';
-import { getStreamUrl } from '../api/tracks';
 
 const formatTime = (seconds: number) => {
     if (!seconds) return '0:00';
@@ -148,9 +147,6 @@ const NowPlayingPage: React.FC = () => {
         nextTrack,
         prevTrack,
         position,
-        setPosition,
-        seekTarget,
-        setSeekTarget,
         deviceId,
         activeDeviceId,
         repeatMode,
@@ -161,10 +157,9 @@ const NowPlayingPage: React.FC = () => {
 
     const [showQueuePanel, setShowQueuePanel] = useState(false);
     const [activeTab, setActiveTab] = useState<'upnext' | 'lyrics' | 'related'>('upnext');
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const lastSeekTimeRef = useRef<number>(0);
 
-    const isActiveDevice = deviceId && deviceId === activeDeviceId;
+    // NOTE: Audio playback is now handled by AudioProvider
+    // NowPlayingPage only handles UI and sending control messages
 
     // Redirect if no track
     useEffect(() => {
@@ -172,65 +167,6 @@ const NowPlayingPage: React.FC = () => {
             navigate('/');
         }
     }, [currentTrack, navigate]);
-
-    // Audio playback control
-    useEffect(() => {
-        if (!isActiveDevice || !audioRef.current || !currentTrack) return;
-
-        if (isPlaying) {
-            audioRef.current.play().catch(e => console.error("Play failed:", e));
-        } else {
-            audioRef.current.pause();
-        }
-    }, [isPlaying, currentTrack, isActiveDevice]);
-
-    // Handle remote seek
-    useEffect(() => {
-        if (!isActiveDevice || !audioRef.current || seekTarget === null) return;
-        lastSeekTimeRef.current = Date.now();
-        audioRef.current.currentTime = seekTarget / 1000;
-        setSeekTarget(null);
-    }, [seekTarget, isActiveDevice, setSeekTarget]);
-
-    // Position sync
-    useEffect(() => {
-        if (!isActiveDevice || !isPlaying || !audioRef.current || !currentTrack) return;
-
-        const syncInterval = setInterval(() => {
-            if (audioRef.current) {
-                const currentPosition = audioRef.current.currentTime * 1000;
-                const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
-                const shouldSkipBroadcast = timeSinceLastSeek < 1000;
-
-                usePlayerStore.getState().setPosition(currentPosition);
-
-                if (!shouldSkipBroadcast) {
-                    sendWebSocketMessage('playback:update', {
-                        track_id: currentTrack.id,
-                        position: Math.round(currentPosition),
-                        playing: true,
-                        active_device_id: deviceId
-                    });
-                }
-            }
-        }, 1000);
-
-        return () => clearInterval(syncInterval);
-    }, [isActiveDevice, isPlaying, currentTrack, deviceId]);
-
-    // Client-side position interpolation
-    useEffect(() => {
-        if (!isActiveDevice && isPlaying && currentTrack) {
-            const interpolateInterval = setInterval(() => {
-                setPosition((prev) => {
-                    const newPos = prev + 100;
-                    return Math.min(newPos, currentTrack.duration * 1000);
-                });
-            }, 100);
-
-            return () => clearInterval(interpolateInterval);
-        }
-    }, [isActiveDevice, isPlaying, currentTrack, setPosition]);
 
     const togglePlay = () => {
         const newState = !isPlaying;
@@ -251,11 +187,9 @@ const NowPlayingPage: React.FC = () => {
         const hasNextTrack = queueIndex < queue.length - 1;
 
         if (repeatMode === 'one' && currentTrack) {
+            // Reset position - AudioProvider will handle the actual seek
             usePlayerStore.getState().setPosition(0);
-            if (isActiveDevice && audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play();
-            }
+            usePlayerStore.getState().setSeekTarget(0);
             sendWebSocketMessage('playback:update', {
                 track_id: currentTrack.id,
                 position: 0,
@@ -292,10 +226,8 @@ const NowPlayingPage: React.FC = () => {
     const handleSeekEnd = () => {
         const newPos = usePlayerStore.getState().position;
 
-        if (isActiveDevice && audioRef.current) {
-            lastSeekTimeRef.current = Date.now();
-            audioRef.current.currentTime = newPos / 1000;
-        }
+        // Set seek target for AudioProvider to handle
+        usePlayerStore.getState().setSeekTarget(newPos);
 
         sendWebSocketMessage('control:seek', { position: newPos });
     };
@@ -316,15 +248,6 @@ const NowPlayingPage: React.FC = () => {
 
     return (
         <div className="fixed inset-0 bg-gradient-to-b from-gray-800 to-gray-900 z-50 flex flex-col">
-            {/* Audio Element */}
-            {isActiveDevice && (
-                <audio
-                    ref={audioRef}
-                    src={getStreamUrl(currentTrack.id)}
-                    onEnded={handleNext}
-                    onError={(e) => console.error("Audio playback error:", e.currentTarget.error)}
-                />
-            )}
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">

@@ -36,7 +36,6 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Authentication
-  clerk_flutter: ^0.0.8
 
   # State Management
   flutter_riverpod: ^2.5.1
@@ -71,6 +70,7 @@ dependencies:
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
   path_provider: ^2.1.4
+  webview_flutter: ^4.13.0
 
 dev_dependencies:
   flutter_test:

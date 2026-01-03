@@ -31,24 +31,45 @@ class AuthNotifier extends _$AuthNotifier {
 
   /// Check authentication status on init
   Future<void> _checkAuthStatus() async {
-    state = const AuthState.loading();
+    try {
+      print('[AuthNotifier] Checking auth status...');
+      state = const AuthState.loading();
 
-    final authRepo = ref.read(authRepositoryProvider);
-    final isAuth = await authRepo.isAuthenticated();
+      final authRepo = ref.read(authRepositoryProvider);
+      final isAuth = await authRepo.isAuthenticated();
 
-    if (!isAuth) {
-      state = const AuthState.unauthenticated();
-      return;
-    }
+      print('[AuthNotifier] isAuthenticated: $isAuth');
 
-    final result = await authRepo.getCurrentUser();
-    result.fold((failure) => state = AuthState.error(failure.message), (user) {
-      if (user != null) {
-        state = AuthState.authenticated(user);
-      } else {
+      if (!isAuth) {
+        print(
+          '[AuthNotifier] Not authenticated, setting unauthenticated state',
+        );
         state = const AuthState.unauthenticated();
+        return;
       }
-    });
+
+      final result = await authRepo.getCurrentUser();
+      result.fold(
+        (failure) {
+          print('[AuthNotifier] Error getting user: ${failure.message}');
+          state = AuthState.error(failure.message);
+        },
+        (user) {
+          if (user != null) {
+            print('[AuthNotifier] User found: ${user.email}');
+            state = AuthState.authenticated(user);
+          } else {
+            print('[AuthNotifier] No user found, setting unauthenticated');
+            state = const AuthState.unauthenticated();
+          }
+        },
+      );
+    } catch (e, stackTrace) {
+      print('[AuthNotifier] Exception in _checkAuthStatus: $e');
+      print('[AuthNotifier] Stack trace: $stackTrace');
+      // Always set to unauthenticated if there's an error during check
+      state = const AuthState.unauthenticated();
+    }
   }
 
   /// Sign in (Clerk handles the sign-in flow)

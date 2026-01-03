@@ -11,9 +11,9 @@ class AppConstants {
       'pk_test_bW9kZXJuLXdhbHJ1cy0xMC5jbGVyay5hY2NvdW50cy5kZXYk';
 
   // API Configuration
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'http://192.168.31.242:3000';
 
-  static const String wsUrl = 'ws://localhost:3000/ws';
+  static const String wsUrl = 'ws://192.168.31.242:3000/ws';
 
   // Production URLs (for when you deploy)
   static const String prodApiUrl = 'https://connectify-api.onrender.com';

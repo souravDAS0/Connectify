@@ -71,6 +71,8 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   path_provider: ^2.1.4
   webview_flutter: ^4.13.0
+  just_audio_background: ^0.0.1-beta.17
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -107,6 +109,7 @@ flutter:
   assets:
     - assets/images/
     - assets/animations/
+    - .env
 
   # Fonts are now handled by google_fonts package
 

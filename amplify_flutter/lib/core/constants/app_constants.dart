@@ -6,19 +6,6 @@ class AppConstants {
   static const String appName = 'Amplify';
   static const String appVersion = '1.0.0';
 
-  // Clerk Configuration
-  static const String clerkPublishableKey =
-      'pk_test_bW9kZXJuLXdhbHJ1cy0xMC5jbGVyay5hY2NvdW50cy5kZXYk';
-
-  // API Configuration
-  static const String baseUrl = 'http://192.168.31.242:3000';
-
-  static const String wsUrl = 'ws://192.168.31.242:3000/ws';
-
-  // Production URLs (for when you deploy)
-  static const String prodApiUrl = 'https://connectify-api.onrender.com';
-  static const String prodWsUrl = 'ws://connectify-api.onrender.com/ws';
-
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

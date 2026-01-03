@@ -1,4 +1,4 @@
-# 🎵 Connectify
+# 🎵 Amplify
 
 A full-stack music streaming application with a modern React frontend, Go backend, and admin panel. Built with real-time capabilities, playlist management, and cross-device playback synchronization.
 
@@ -7,15 +7,15 @@ A full-stack music streaming application with a modern React frontend, Go backen
 ## 📁 Project Structure
 
 ```
-Connectify/
-├── connectify-frontend/    # User-facing music streaming app
-├── connectify-backend/     # Go REST API & WebSocket server
-└── connectify-admin/       # Admin dashboard for content management
+Amplify/
+├── amplify-frontend/    # User-facing music streaming app
+├── amplify-backend/     # Go REST API & WebSocket server
+└── amplify-admin/       # Admin dashboard for content management
 ```
 
 ---
 
-## 🎨 Frontend (`connectify-frontend`)
+## 🎨 Frontend (`amplify-frontend`)
 
 A modern, responsive music streaming web application built with React and TypeScript.
 
@@ -79,7 +79,7 @@ Uses **Zustand** for global state with the following stores:
 ### Running the Frontend
 
 ```bash
-cd connectify-frontend
+cd amplify-frontend
 npm install
 npm run dev
 ```
@@ -88,7 +88,7 @@ Runs on `http://localhost:5173` by default.
 
 ---
 
-## ⚙️ Backend (`connectify-backend`)
+## ⚙️ Backend (`amplify-backend`)
 
 A high-performance REST API and WebSocket server built with Go and Fiber.
 
@@ -163,7 +163,7 @@ Real-time synchronization for multi-device playback:
 
 ```env
 PORT=8080
-MONGODB_URI=mongodb://localhost:27017/connectify
+MONGODB_URI=mongodb://localhost:27017/amplify
 REDIS_URL=redis://localhost:6379
 CLERK_SECRET_KEY=sk_xxx
 CLOUDINARY_URL=cloudinary://xxx
@@ -172,7 +172,7 @@ CLOUDINARY_URL=cloudinary://xxx
 ### Running the Backend
 
 ```bash
-cd connectify-backend
+cd amplify-backend
 go mod download
 go run cmd/main.go
 ```
@@ -181,7 +181,7 @@ Runs on `http://localhost:8080` by default.
 
 ---
 
-## 🛠️ Admin Panel (`connectify-admin`)
+## 🛠️ Admin Panel (`amplify-admin`)
 
 A dedicated admin dashboard for managing music content, users, and playlists.
 
@@ -229,7 +229,7 @@ The admin panel uses Clerk with additional backend verification:
 ### Running the Admin Panel
 
 ```bash
-cd connectify-admin
+cd amplify-admin
 npm install
 npm run dev
 ```
@@ -255,7 +255,7 @@ Runs on `http://localhost:5174` by default.
 
    ```bash
    git clone <repo-url>
-   cd Connectify
+   cd Amplify
    ```
 
 2. **Configure environment variables**
@@ -265,7 +265,7 @@ Runs on `http://localhost:5174` by default.
 3. **Start the backend**
 
    ```bash
-   cd connectify-backend
+   cd amplify-backend
    go mod download
    go run cmd/main.go
    ```
@@ -273,14 +273,14 @@ Runs on `http://localhost:5174` by default.
 4. **Start the frontend**
 
    ```bash
-   cd connectify-frontend
+   cd amplify-frontend
    npm install
    npm run dev
    ```
 
 5. **Start the admin panel** (optional)
    ```bash
-   cd connectify-admin
+   cd amplify-admin
    npm install
    npm run dev
    ```

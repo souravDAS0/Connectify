@@ -164,7 +164,6 @@ Real-time synchronization for multi-device playback:
 ```env
 PORT=8080
 MONGODB_URI=mongodb://localhost:27017/amplify
-REDIS_URL=redis://localhost:6379
 CLERK_SECRET_KEY=sk_xxx
 CLOUDINARY_URL=cloudinary://xxx
 ```

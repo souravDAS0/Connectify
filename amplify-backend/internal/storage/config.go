@@ -3,21 +3,15 @@ package storage
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 type StorageConfig struct {
-	BasePath          string
 	MaxFileSize       int64
 	AllowedAudioTypes []string
 	AllowedImageTypes []string
 }
 
 func DefaultConfig() *StorageConfig {
-	basePath := os.Getenv("STORAGE_PATH")
-	if basePath == "" {
-		basePath = "./storage"
-	}
 
 	maxFileSize := int64(10 * 1024 * 1024) // 10MB default
 	if envSize := os.Getenv("MAX_FILE_SIZE"); envSize != "" {
@@ -26,7 +20,6 @@ func DefaultConfig() *StorageConfig {
 	}
 
 	return &StorageConfig{
-		BasePath:    basePath,
 		MaxFileSize: maxFileSize,
 		AllowedAudioTypes: []string{
 			"audio/mpeg",  // MP3
@@ -47,24 +40,6 @@ func DefaultConfig() *StorageConfig {
 	}
 }
 
-// InitDirectories creates the required storage directories
-func (sc *StorageConfig) InitDirectories() error {
-	dirs := []string{
-		filepath.Join(sc.BasePath, "tracks"),
-		filepath.Join(sc.BasePath, "album-art"),
-		filepath.Join(sc.BasePath, "temp"),
-	}
-
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-
-	return nil
-}
-
-// IsAudioTypeAllowed checks if the MIME type is allowed for audio files
 func (sc *StorageConfig) IsAudioTypeAllowed(mimeType string) bool {
 	for _, allowed := range sc.AllowedAudioTypes {
 		if allowed == mimeType {

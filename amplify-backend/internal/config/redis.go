@@ -7,17 +7,8 @@ import (
 )
 
 func InitRedis() *redis.Client {
-	addr := os.Getenv("REDIS_ADDR")
+	opt, _ := redis.ParseURL(os.Getenv("REDIS_URL"))
+	client := redis.NewClient(opt)
 
-	if addr == "" {
-		addr = "localhost:6379"
-	}
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: "",
-		DB:       0,
-	})
-
-	return rdb
+	return client
 }

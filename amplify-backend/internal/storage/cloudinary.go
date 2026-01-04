@@ -145,7 +145,7 @@ func (s *CloudinaryService) DeleteFile(publicID string) error {
 // GetFilePath returns the Cloudinary URL for the resource
 func (s *CloudinaryService) GetFilePath(publicID string) string {
 	// For audio files, return the secure URL
-	if strings.HasPrefix(publicID, "connectify/audio/") {
+	if strings.HasPrefix(publicID, "amplify/audio/") {
 		asset, err := s.cld.Video(publicID)
 		if err != nil {
 			return ""

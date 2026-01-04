@@ -69,34 +69,23 @@ func main() {
 
 	// Initialize storage based on environment
 	var storageService storage.StorageProvider
-	storageType := os.Getenv("STORAGE_TYPE")
 
-	if storageType == "cloudinary" {
-		// Initialize Cloudinary
-		cloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
-		apiKey := os.Getenv("CLOUDINARY_API_KEY")
-		apiSecret := os.Getenv("CLOUDINARY_API_SECRET")
+	// Initialize Cloudinary
+	cloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
+	apiKey := os.Getenv("CLOUDINARY_API_KEY")
+	apiSecret := os.Getenv("CLOUDINARY_API_SECRET")
 
-		if cloudName == "" || apiKey == "" || apiSecret == "" {
-			log.Fatal("Cloudinary credentials required: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET")
-		}
-
-		storageConfig := storage.DefaultConfig()
-		cloudinaryService, err := storage.NewCloudinaryService(cloudName, apiKey, apiSecret, storageConfig)
-		if err != nil {
-			log.Fatal("Failed to initialize Cloudinary:", err)
-		}
-		storageService = cloudinaryService
-		fmt.Println("Cloudinary storage initialized")
-	} else {
-		// Default to local storage
-		storageConfig := storage.DefaultConfig()
-		if err := storageConfig.InitDirectories(); err != nil {
-			log.Fatal("Failed to initialize storage:", err)
-		}
-		fmt.Printf("Local storage initialized at: %s\n", storageConfig.BasePath)
-		storageService = storage.NewStorageService(storageConfig)
+	if cloudName == "" || apiKey == "" || apiSecret == "" {
+		log.Fatal("Cloudinary credentials required: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET")
 	}
+
+	storageConfig := storage.DefaultConfig()
+	cloudinaryService, err := storage.NewCloudinaryService(cloudName, apiKey, apiSecret, storageConfig)
+	if err != nil {
+		log.Fatal("Failed to initialize Cloudinary:", err)
+	}
+	storageService = cloudinaryService
+	fmt.Println("Cloudinary storage initialized")
 
 	// Initialize WebSocket hub
 	hub := websocket.NewHub(redisClient)

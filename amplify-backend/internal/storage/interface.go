@@ -11,3 +11,14 @@ type StorageProvider interface {
 	GetFilePath(string) string
 	GetFileURL(string) string
 }
+
+type FileInfo struct {
+	Path     string // Relative path from storage base
+	FileName string // Original filename
+	Size     int64
+	MimeType string
+}
+
+type StorageService struct {
+	config *StorageConfig
+}

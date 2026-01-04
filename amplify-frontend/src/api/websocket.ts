@@ -1,7 +1,8 @@
+import Config from "../config";
 import { usePlayerStore } from "../store/usePlayerStore";
 import { getTrackById } from "./tracks";
 
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://192.168.31.244:3000/ws";
+const WS_URL = Config.wsUrl;
 
 let ws: WebSocket | null = null;
 let reconnectInterval: NodeJS.Timeout | null = null;

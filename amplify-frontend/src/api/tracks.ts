@@ -1,8 +1,9 @@
-import { apiClient } from './client';
-import type { Track } from '../types';
+import { apiClient } from "./client";
+import type { Track } from "../types";
+import Config from "../config";
 
 export const getTracks = async (): Promise<Track[]> => {
-  const response = await apiClient.get('/tracks');
+  const response = await apiClient.get("/tracks");
   return response.data;
 };
 
@@ -16,6 +17,6 @@ export const getTrackById = async (trackId: string): Promise<Track> => {
 };
 
 export const getStreamUrl = (trackId: string): string => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.31.244:3000';
+  const baseUrl = Config.apiUrl;
   return `${baseUrl}/stream/${trackId}`;
 };

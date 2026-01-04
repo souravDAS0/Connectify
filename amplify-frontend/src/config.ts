@@ -10,10 +10,8 @@ class Config {
     // Check for VITE_ENVIRONMENT first, then ENVIRONMENT, then default to development
     // import.meta.env.MODE is also a logical fallback for Vite
     return (
-      import.meta.env.VITE_ENVIRONMENT ||
-      import.meta.env.ENVIRONMENT ||
-      import.meta.env.MODE ||
-      "development"
+      // import.meta.env.VITE_ENVIRONMENT ||
+      import.meta.env.ENVIRONMENT || import.meta.env.MODE || "development"
     );
   }
 

@@ -56,26 +56,39 @@ const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     useEffect(() => {
         if (!isActiveDevice || !isPlaying || !audioRef.current || !currentTrack) return;
 
-        // Combined update and sync interval
+        // Track last broadcast to prevent spam
+        const lastBroadcastRef = {
+            time: Date.now(),
+            position: audioRef.current.currentTime * 1000
+        };
+
         const syncInterval = setInterval(() => {
             if (audioRef.current) {
                 const currentPosition = audioRef.current.currentTime * 1000;
-                const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
-
-                // Skip broadcast for 1000ms after seek to prevent race condition
-                const shouldSkipBroadcast = timeSinceLastSeek < 1000;
+                const now = Date.now();
 
                 // Always update local state (for UI)
                 usePlayerStore.getState().setPosition(currentPosition);
 
-                // Only sync to server if enough time passed since last seek
-                if (!shouldSkipBroadcast) {
+                // Calculate expected position since last broadcast
+                const timeSinceLastBroadcast = now - lastBroadcastRef.time;
+                const expectedPosition = lastBroadcastRef.position + timeSinceLastBroadcast;
+                const drift = Math.abs(currentPosition - expectedPosition);
+
+                // Only sync to server if:
+                // 1. Significant drift (> 2000ms)
+                // 2. Or it's been a very long time (> 10 seconds) just to be safe
+                if (drift > 2000 || timeSinceLastBroadcast > 10000) {
                     sendWebSocketMessage('playback:update', {
                         track_id: currentTrack.id,
                         position: Math.round(currentPosition),
                         playing: true,
                         active_device_id: deviceId
                     });
+
+                    // Update reference point
+                    lastBroadcastRef.time = now;
+                    lastBroadcastRef.position = currentPosition;
                 }
             }
         }, 1000);

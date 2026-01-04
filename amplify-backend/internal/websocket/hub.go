@@ -545,6 +545,24 @@ func (c *Client) readPump() {
 		// Handle different message types
 		switch msg.Type {
 		case "playback:update":
+			// Verify if this device is allowed to update playback state
+			// Only the active device should be sending position updates
+			ctx := context.Background()
+			key := "user:" + c.UserID + ":playback"
+			val, err := c.hub.redisClient.Get(ctx, key).Result()
+
+			var currentState PlaybackState
+			if err == nil {
+				json.Unmarshal([]byte(val), &currentState)
+			}
+
+			// If there is an active device set, and it's NOT us, ignore the update
+			// This prevents "zombie" tabs or other devices from interfering
+			if currentState.ActiveDeviceID != "" && currentState.ActiveDeviceID != c.DeviceID {
+				// log.Printf("Ignored playback update from inactive device %s (Active: %s)", c.DeviceID, currentState.ActiveDeviceID)
+				continue
+			}
+
 			stateData, _ := json.Marshal(msg.Data)
 			var state PlaybackState
 			if err := json.Unmarshal(stateData, &state); err != nil {
@@ -604,6 +622,20 @@ func (c *Client) readPump() {
 			stateData, _ := json.Marshal(msg.Data)
 			var volCmd VolumeCommand
 			json.Unmarshal(stateData, &volCmd)
+
+			// Get current state to check if volume actually changed
+			ctx := context.Background()
+			key := "user:" + c.UserID + ":playback"
+			val, _ := c.hub.redisClient.Get(ctx, key).Result()
+			var currentState PlaybackState
+			if val != "" {
+				json.Unmarshal([]byte(val), &currentState)
+				// If volume is essentially the same, skip broadcast
+				if currentState.Volume == volCmd.Volume {
+					continue
+				}
+			}
+
 			state := PlaybackState{Volume: volCmd.Volume}
 			c.hub.publishToRedis(c.UserID, state)
 
@@ -651,6 +683,18 @@ func (c *Client) readPump() {
 			json.Unmarshal(stateData, &shuffleData)
 
 			if shuffle, ok := shuffleData["shuffle"].(bool); ok {
+				// Get current state to verify change
+				ctx := context.Background()
+				key := "user:" + c.UserID + ":playback"
+				val, _ := c.hub.redisClient.Get(ctx, key).Result()
+				var currentState PlaybackState
+				if val != "" {
+					json.Unmarshal([]byte(val), &currentState)
+					if currentState.Shuffle == shuffle {
+						continue
+					}
+				}
+
 				// Save to playback state
 				state := PlaybackState{Shuffle: shuffle}
 				c.hub.publishToRedis(c.UserID, state)
@@ -667,6 +711,18 @@ func (c *Client) readPump() {
 			json.Unmarshal(stateData, &repeatData)
 
 			if mode, ok := repeatData["mode"].(string); ok {
+				// Get current state to verify change
+				ctx := context.Background()
+				key := "user:" + c.UserID + ":playback"
+				val, _ := c.hub.redisClient.Get(ctx, key).Result()
+				var currentState PlaybackState
+				if val != "" {
+					json.Unmarshal([]byte(val), &currentState)
+					if currentState.Repeat == mode {
+						continue
+					}
+				}
+
 				// Save to playback state
 				state := PlaybackState{Repeat: mode}
 				c.hub.publishToRedis(c.UserID, state)

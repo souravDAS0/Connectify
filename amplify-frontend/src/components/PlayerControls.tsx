@@ -96,10 +96,20 @@ const PlayerControls: React.FC = () => {
     sendWebSocketMessage('control:previous', {});
   };
 
+  const [volumeDebounceTimer, setVolumeDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVol = parseFloat(e.target.value);
-    setVolume(newVol);
-    sendWebSocketMessage('control:volume', { volume: newVol });
+    setVolume(newVol); // Update local state immediately for smooth UI
+
+    // Debounce network request
+    if (volumeDebounceTimer) clearTimeout(volumeDebounceTimer);
+
+    const timer = setTimeout(() => {
+      sendWebSocketMessage('control:volume', { volume: newVol });
+    }, 200);
+
+    setVolumeDebounceTimer(timer);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {

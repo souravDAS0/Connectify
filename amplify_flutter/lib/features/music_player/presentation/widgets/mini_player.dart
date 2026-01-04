@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:amplify_flutter/features/music_player/presentation/pages/full_player_page.dart';
 import 'package:amplify_flutter/features/music_player/presentation/providers/player_controller.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class MiniPlayer extends ConsumerWidget {
   const MiniPlayer({super.key});
@@ -24,12 +25,10 @@ class MiniPlayer extends ConsumerWidget {
         );
       },
       child: Container(
-        height: 64,
-        margin: const EdgeInsets.all(8),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(8),
+          // color: Colors.amberAccent,
+          color: const Color(0xFF101826),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.3),
@@ -72,18 +71,44 @@ class MiniPlayer extends ConsumerWidget {
                     track.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
                   ),
                 ],
               ),
             ),
             IconButton(
+              padding: EdgeInsets.all(12),
+              style: ButtonStyle(
+                backgroundColor: WidgetStatePropertyAll(Colors.white),
+                foregroundColor: WidgetStatePropertyAll(Colors.black),
+                shape: WidgetStatePropertyAll(
+                  playerState.isPlaying
+                      ? RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        )
+                      : CircleBorder(),
+                ),
+              ),
               icon: Icon(
-                playerState.isPlaying ? Icons.pause : Icons.play_arrow,
+                playerState.isPlaying ? LucideIcons.pause : LucideIcons.play,
+                fill: 1,
+                color: Colors.black,
               ),
               onPressed: () {
                 ref.read(playerControllerProvider.notifier).togglePlayPause();
               },
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              child: Icon(LucideIcons.skipForward, fill: 1),
+              onTap: () {
+                ref.read(playerControllerProvider.notifier).nextTrack();
+              },
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              child: Icon(LucideIcons.smartphone, color: Colors.grey),
+              onTap: () {},
             ),
           ],
         ),

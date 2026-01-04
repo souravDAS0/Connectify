@@ -25,53 +25,53 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: RouteConstants.splash,
+    // initialLocation: RouteConstants.splash,
+    initialLocation: RouteConstants.home,
     refreshListenable: authStateNotifier,
     debugLogDiagnostics: true,
 
     // Redirect logic for authentication
-    redirect: (context, state) {
-      final authState = ref.read(authNotifierProvider);
-      final isOnSplash = state.matchedLocation == RouteConstants.splash;
-      final isOnAuth = state.matchedLocation == RouteConstants.auth;
+    // redirect: (context, state) {
+    //   final authState = ref.read(authNotifierProvider);
+    //   final isOnSplash = state.matchedLocation == RouteConstants.splash;
+    //   final isOnAuth = state.matchedLocation == RouteConstants.auth;
 
-      print('[Router] Current location: ${state.matchedLocation}');
-      print('[Router] Auth state: ${authState.toString()}');
+    //   print('[Router] Current location: ${state.matchedLocation}');
+    //   print('[Router] Auth state: ${authState.toString()}');
 
-      return authState.when(
-        initial: () {
-          print('[Router] State: initial, staying on splash');
-          return isOnSplash ? null : RouteConstants.splash;
-        },
-        loading: () {
-          print('[Router] State: loading, staying on splash');
-          return isOnSplash ? null : RouteConstants.splash;
-        },
-        authenticated: (_) {
-          print('[Router] State: authenticated, redirecting to home');
-          // If authenticated and on auth/splash, go to home
-          if (isOnAuth || isOnSplash) {
-            return RouteConstants.home;
-          }
-          return null; // Stay on current route
-        },
-        unauthenticated: () {
-          print('[Router] State: unauthenticated');
-          // If not authenticated, always go to auth (except if already there)
-          if (isOnAuth) {
-            print('[Router] Already on auth page');
-            return null; // Already on auth page
-          }
-          print('[Router] Redirecting to auth page');
-          return RouteConstants.auth;
-        },
-        error: (message) {
-          print('[Router] State: error ($message), redirecting to auth');
-          return RouteConstants.auth;
-        },
-      );
-    },
-
+    //   return authState.when(
+    //     initial: () {
+    //       print('[Router] State: initial, staying on splash');
+    //       return isOnSplash ? null : RouteConstants.splash;
+    //     },
+    //     loading: () {
+    //       print('[Router] State: loading, staying on splash');
+    //       return isOnSplash ? null : RouteConstants.splash;
+    //     },
+    //     authenticated: (_) {
+    //       print('[Router] State: authenticated, redirecting to home');
+    //       // If authenticated and on auth/splash, go to home
+    //       if (isOnAuth || isOnSplash) {
+    //         return RouteConstants.home;
+    //       }
+    //       return null; // Stay on current route
+    //     },
+    //     unauthenticated: () {
+    //       print('[Router] State: unauthenticated');
+    //       // If not authenticated, always go to auth (except if already there)
+    //       if (isOnAuth) {
+    //         print('[Router] Already on auth page');
+    //         return null; // Already on auth page
+    //       }
+    //       print('[Router] Redirecting to auth page');
+    //       return RouteConstants.auth;
+    //     },
+    //     error: (message) {
+    //       print('[Router] State: error ($message), redirecting to auth');
+    //       return RouteConstants.auth;
+    //     },
+    //   );
+    // },
     routes: [
       // Splash Route
       GoRoute(

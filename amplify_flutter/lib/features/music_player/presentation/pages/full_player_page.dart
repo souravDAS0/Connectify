@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:amplify_flutter/features/music_player/presentation/providers/player_controller.dart';
 import 'package:amplify_flutter/features/music_player/application/audio_player_service.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class FullPlayerPage extends ConsumerWidget {
   const FullPlayerPage({super.key});
@@ -148,7 +149,9 @@ class FullPlayerPage extends ConsumerWidget {
                         .togglePlayPause();
                   },
                   child: Icon(
-                    playerState.isPlaying ? Icons.pause : Icons.play_arrow,
+                    playerState.isPlaying
+                        ? LucideIcons.pause
+                        : LucideIcons.play,
                   ),
                 ),
                 IconButton(

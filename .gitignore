@@ -1,5 +1,6 @@
-connectify-backend/storage
-connectify-backend/.env
-connectify-admin/.env
-connectify-frontend/.env
+amplify-backend/storage
+amplify-backend/.env
+amplify-admin/.env
+amplify-frontend/.env
 .DS_Store
+.claude

@@ -6,8 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// RegisterWebSocketRoutesWithClerk handles WebSocket with Clerk auth
-func RegisterWebSocketRoutesWithClerk(app *fiber.App, hub *Hub, config *middleware.ClerkConfig) {
+// RegisterWebSocketRoutesWithSupabase handles WebSocket with Supabase auth
+func RegisterWebSocketRoutesWithSupabase(app *fiber.App, hub *Hub, config *middleware.SupabaseConfig) {
 	app.Get("/ws", func(c *fiber.Ctx) error {
 		// Get token from query params
 		token := c.Query("token")
@@ -15,8 +15,8 @@ func RegisterWebSocketRoutesWithClerk(app *fiber.App, hub *Hub, config *middlewa
 			return c.Status(401).JSON(fiber.Map{"error": "Missing token"})
 		}
 
-		// Verify with both Clerk keys
-		claims, err := middleware.VerifyTokenWithBothKeys(c.Context(), token, config)
+		// Verify with Supabase
+		claims, err := middleware.VerifySupabaseToken(c.Context(), token, config)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
 		}

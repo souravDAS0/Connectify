@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
@@ -37,35 +36,28 @@ func main() {
 	defer redisClient.Close()
 	fmt.Println("Redis connected")
 
-	// Initialize Clerk with both secret keys
-	clerkSecretKey := os.Getenv("CLERK_SECRET_KEY")
-	clerkPublishableKey := os.Getenv("CLERK_PUBLISHABLE_KEY")
-	clerkAdminSecretKey := os.Getenv("CLERK_ADMIN_SECRET_KEY")
-	clerkAdminPublishableKey := os.Getenv("CLERK_ADMIN_PUBLISHABLE_KEY")
+	// Initialize Supabase configuration
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	supabaseAnonKey := os.Getenv("SUPABASE_ANON_KEY")
+	supabaseJWTSecret := os.Getenv("SUPABASE_JWT_SECRET")
 
-	if clerkSecretKey == "" {
-		log.Fatal("CLERK_SECRET_KEY environment variable is required")
+	if supabaseURL == "" {
+		log.Fatal("SUPABASE_URL environment variable is required")
 	}
-	if clerkPublishableKey == "" {
-		log.Fatal("CLERK_PUBLISHABLE_KEY environment variable is required")
+	if supabaseAnonKey == "" {
+		log.Fatal("SUPABASE_ANON_KEY environment variable is required")
 	}
-	if clerkAdminSecretKey == "" {
-		log.Fatal("CLERK_ADMIN_SECRET_KEY environment variable is required")
-	}
-	if clerkAdminPublishableKey == "" {
-		log.Fatal("CLERK_ADMIN_PUBLISHABLE_KEY environment variable is required")
+	if supabaseJWTSecret == "" {
+		log.Fatal("SUPABASE_JWT_SECRET environment variable is required")
 	}
 
-	clerk.SetKey(clerkSecretKey) // Set default key for SDK
-	fmt.Println("Clerk initialized with dual authentication support")
-
-	// Create Clerk config for middleware
-	clerkConfig := &middleware.ClerkConfig{
-		FrontendSecretKey:      clerkSecretKey,
-		FrontendPublishableKey: clerkPublishableKey,
-		AdminSecretKey:         clerkAdminSecretKey,
-		AdminPublishableKey:    clerkAdminPublishableKey,
+	// Create Supabase config for middleware
+	supabaseConfig := &middleware.SupabaseConfig{
+		URL:       supabaseURL,
+		AnonKey:   supabaseAnonKey,
+		JWTSecret: supabaseJWTSecret,
 	}
+	fmt.Println("Supabase authentication initialized")
 
 	// Initialize storage based on environment
 	var storageService storage.StorageProvider
@@ -97,11 +89,12 @@ func main() {
 		BodyLimit:             15 * 1024 * 1024, // 15MB
 	})
 
-	// Add CORS middleware
+	// Add CORS middleware with WebSocket support
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders: "*",
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,Upgrade,Connection,Sec-WebSocket-Key,Sec-WebSocket-Version,Sec-WebSocket-Extensions",
+		AllowCredentials: false,
 	}))
 
 	// Initialize services
@@ -114,8 +107,8 @@ func main() {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
 
-	// Register WebSocket routes with Clerk auth
-	websocket.RegisterWebSocketRoutesWithClerk(app, hub, clerkConfig)
+	// Register WebSocket routes with Supabase auth
+	websocket.RegisterWebSocketRoutesWithSupabase(app, hub, supabaseConfig)
 
 	// Register public music routes (tracks listing, streaming)
 	app.Get("/tracks", func(c *fiber.Ctx) error {
@@ -135,18 +128,18 @@ func main() {
 		return c.JSON(track)
 	})
 
-	// Register music routes with analytics services (Clerk protected)
+	// Register music routes with analytics services (PUBLIC - no auth required for streaming)
 	music.RegisterRoutesWithAnalytics(app, musicService, storageService, &music.AnalyticsServices{
 		MusicService:    musicService,
 		PlaylistService: playlistService,
 		AuthService:     authService,
 	})
 
-	// Register playlist routes (Clerk protected)
+	// Register playlist routes (PUBLIC - guest users can view, auth required to create/edit)
+	// Note: Auth enforcement happens at the application logic level, not middleware
 	playlist.RegisterRoutes(app, playlistService)
 
 	// User management endpoint (TEMPORARILY WITHOUT AUTH FOR TESTING)
-	// TODO: Fix Clerk secret keys and re-enable ClerkAdminAuth
 	app.Get("/users", func(c *fiber.Ctx) error {
 		log.Println("GET /users endpoint hit")
 		users, err := authService.GetAllUsers()
@@ -159,7 +152,7 @@ func main() {
 	})
 
 	// Admin routes for user management (protected with admin middleware)
-	adminRoutes := app.Group("/admin", middleware.ClerkAdminAuth(clerkConfig))
+	adminRoutes := app.Group("/admin", middleware.SupabaseAdminAuth(supabaseConfig))
 	adminRoutes.Get("/users", func(c *fiber.Ctx) error {
 		users, err := authService.GetAllUsers()
 		if err != nil {

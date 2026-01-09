@@ -1,35 +1,28 @@
-import axios from 'axios';
+import axios from "axios";
+import Config from "../config";
+import { supabase } from "../lib/supabase";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = Config.apiUrl;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// For multipart form data uploads
-export const apiClientMultipart = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'multipart/form-data',
-  },
-});
-
-// Request interceptor to add Clerk token - for apiClient
+// Request interceptor to add Supabase token
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const clerkInstance = (window as any).Clerk;
-      if (clerkInstance && clerkInstance.session) {
-        const token = await clerkInstance.session.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
       }
     } catch (error) {
-      console.error('Failed to get auth token:', error);
+      console.error("Failed to get auth token:", error);
     }
     return config;
   },
@@ -38,44 +31,56 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Request interceptor to add Clerk token - for apiClientMultipart
-apiClientMultipart.interceptors.request.use(
-  async (config) => {
-    try {
-      const clerkInstance = (window as any).Clerk;
-      if (clerkInstance && clerkInstance.session) {
-        const token = await clerkInstance.session.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to get auth token:', error);
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for handling auth errors - for apiClient
+// Response interceptor for handling errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      window.location.href = '/login';
+    // Don't auto-redirect on 401 to support guest mode
+    // Individual features can handle auth requirements as needed
+    if (error.response?.status === 401) {
+      console.warn(
+        "Unauthorized request - user may need to sign in for this feature"
+      );
     }
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for handling auth errors - for apiClientMultipart
+// Create separate client for multipart uploads
+export const apiClientMultipart = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "multipart/form-data",
+  },
+});
+
+// Add same interceptors to multipart client
+apiClientMultipart.interceptors.request.use(
+  async (config) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+      }
+    } catch (error) {
+      console.error("Failed to get auth token:", error);
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 apiClientMultipart.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      window.location.href = '/login';
+    if (error.response?.status === 401) {
+      console.warn(
+        "Unauthorized request - user may need to sign in for this feature"
+      );
     }
     return Promise.reject(error);
   }

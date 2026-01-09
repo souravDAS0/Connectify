@@ -1,5 +1,6 @@
 import axios from "axios";
 import Config from "../config";
+import { supabase } from "../lib/supabase";
 
 const API_BASE_URL = Config.apiUrl;
 
@@ -10,17 +11,13 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add Clerk token
+// Request interceptor to add Supabase token
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      // Get Clerk instance from window
-      const clerkInstance = (window as any).Clerk;
-      if (clerkInstance && clerkInstance.session) {
-        const token = await clerkInstance.session.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
       }
     } catch (error) {
       console.error("Failed to get auth token:", error);
@@ -32,13 +29,16 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for handling auth errors
+// Response interceptor for handling errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Don't auto-redirect on 401 to support guest mode
+    // Individual features can handle auth requirements as needed
     if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
-      window.location.href = "/login";
+      console.warn(
+        "Unauthorized request - user may need to sign in for this feature"
+      );
     }
     return Promise.reject(error);
   }

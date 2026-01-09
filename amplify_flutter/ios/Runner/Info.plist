@@ -55,6 +55,14 @@
 				<string>connectify</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.amplify.app</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

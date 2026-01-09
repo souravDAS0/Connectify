@@ -4,3 +4,5 @@ amplify-admin/.env
 amplify-frontend/.env
 .DS_Store
 .claude
+.agent
+.vscode

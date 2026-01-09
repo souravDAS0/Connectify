@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/user.dart';
@@ -23,94 +24,137 @@ Future<User?> currentUser(CurrentUserRef ref) async {
 /// Auth state notifier provider
 @riverpod
 class AuthNotifier extends _$AuthNotifier {
+  StreamSubscription? _authSubscription;
+
   @override
   AuthState build() {
-    _checkAuthStatus();
+    _init();
     return const AuthState.initial();
   }
 
-  /// Check authentication status on init
-  Future<void> _checkAuthStatus() async {
+  /// Initialize auth state and listen to changes
+  Future<void> _init() async {
     try {
-      print('[AuthNotifier] Checking auth status...');
+      print('[AuthNotifier] Initializing...');
       state = const AuthState.loading();
 
       final authRepo = ref.read(authRepositoryProvider);
-      final isAuth = await authRepo.isAuthenticated();
 
-      print('[AuthNotifier] isAuthenticated: $isAuth');
+      // Check initial auth status
+      final isAuth = await authRepo.isAuthenticated();
+      print('[AuthNotifier] Initial auth status: $isAuth');
 
       if (!isAuth) {
-        print(
-          '[AuthNotifier] Not authenticated, setting unauthenticated state',
-        );
+        print('[AuthNotifier] Not authenticated');
         state = const AuthState.unauthenticated();
-        return;
+      } else {
+        // Get current user
+        final result = await authRepo.getCurrentUser();
+        result.fold(
+          (failure) {
+            print('[AuthNotifier] Error getting user: ${failure.message}');
+            state = const AuthState.unauthenticated();
+          },
+          (user) {
+            if (user != null) {
+              print('[AuthNotifier] User found: ${user.email}');
+              state = AuthState.authenticated(user);
+            } else {
+              print('[AuthNotifier] No user found');
+              state = const AuthState.unauthenticated();
+            }
+          },
+        );
       }
 
-      final result = await authRepo.getCurrentUser();
-      result.fold(
-        (failure) {
-          print('[AuthNotifier] Error getting user: ${failure.message}');
-          state = AuthState.error(failure.message);
-        },
+      // Listen to auth state changes
+      _authSubscription?.cancel();
+      _authSubscription = authRepo.watchAuthState().listen(
         (user) {
+          print('[AuthNotifier] Auth state changed via stream');
           if (user != null) {
-            print('[AuthNotifier] User found: ${user.email}');
+            print('[AuthNotifier] User authenticated: ${user.email}');
             state = AuthState.authenticated(user);
           } else {
-            print('[AuthNotifier] No user found, setting unauthenticated');
+            print('[AuthNotifier] User unauthenticated');
             state = const AuthState.unauthenticated();
           }
         },
+        onError: (error) {
+          print('[AuthNotifier] Error in auth stream: $error');
+          state = const AuthState.unauthenticated();
+        },
       );
     } catch (e, stackTrace) {
-      print('[AuthNotifier] Exception in _checkAuthStatus: $e');
+      print('[AuthNotifier] Exception in _init: $e');
       print('[AuthNotifier] Stack trace: $stackTrace');
-      // Always set to unauthenticated if there's an error during check
       state = const AuthState.unauthenticated();
     }
   }
 
-  /// Sign in (Clerk handles the sign-in flow)
-  Future<void> signIn() async {
+  /// Sign in with Google
+  Future<void> signInWithGoogle() async {
     state = const AuthState.loading();
 
     try {
-      // Clerk sign-in is handled by Clerk UI components
-      // This method just checks if sign-in was successful
-      final authRepo = ref.read(authRepositoryProvider);
-      final result = await authRepo.getCurrentUser();
+      final authRepo = ref.read(authRepositoryProvider) as AuthRepositoryImpl;
+      final result = await authRepo.signInWithGoogle();
 
-      result.fold((failure) => state = AuthState.error(failure.message), (
-        user,
-      ) {
-        if (user != null) {
+      result.fold(
+        (failure) {
+          print('[AuthNotifier] Sign in failed: ${failure.message}');
+          state = AuthState.error(failure.message);
+
+          // Return to unauthenticated after showing error
+          Future.delayed(const Duration(seconds: 2), () {
+            state.maybeWhen(
+              error: (_) => state = const AuthState.unauthenticated(),
+              orElse: () {},
+            );
+          });
+        },
+        (user) {
+          print('[AuthNotifier] Sign in successful: ${user.email}');
           state = AuthState.authenticated(user);
-        } else {
-          state = const AuthState.unauthenticated();
-        }
-      });
+        },
+      );
     } catch (e) {
+      print('[AuthNotifier] Exception during sign in: $e');
       state = AuthState.error(e.toString());
+
+      // Return to unauthenticated after showing error
+      Future.delayed(const Duration(seconds: 2), () {
+        state.maybeWhen(
+          error: (_) => state = const AuthState.unauthenticated(),
+          orElse: () {},
+        );
+      });
     }
   }
 
   /// Sign out
   Future<void> signOut() async {
+    final previousState = state;
     state = const AuthState.loading();
 
     final authRepo = ref.read(authRepositoryProvider);
     final result = await authRepo.signOut();
 
     result.fold(
-      (failure) => state = AuthState.error(failure.message),
-      (_) => state = const AuthState.unauthenticated(),
+      (failure) {
+        print('[AuthNotifier] Sign out failed: ${failure.message}');
+        // Restore previous state on failure
+        state = previousState;
+      },
+      (_) {
+        print('[AuthNotifier] Sign out successful');
+        state = const AuthState.unauthenticated();
+      },
     );
   }
 
   /// Refresh authentication state
   Future<void> refresh() async {
-    await _checkAuthStatus();
+    await _init();
   }
 }

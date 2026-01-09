@@ -29,6 +29,9 @@ func RegisterRoutes(app *fiber.App, service *MusicService, storageService storag
 	RegisterRoutesWithAnalytics(app, service, storageService, nil)
 }
 
+// RegisterRoutesWithAnalytics registers music-related routes
+// All routes are PUBLIC and do not require authentication (guest mode support)
+// This allows users to browse and stream music without signing in
 func RegisterRoutesWithAnalytics(app *fiber.App, service *MusicService, storageService storage.StorageProvider, analyticsServices *AnalyticsServices) {
 	// Legacy endpoint for adding tracks with JSON (kept for backward compatibility)
 	app.Post("/tracks", func(c *fiber.Ctx) error {

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import { UserButton } from '@clerk/clerk-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import PlayerControls from './PlayerControls';
 import NowPlayingOverlay from './NowPlayingOverlay';
-import { dark } from "@clerk/themes";
-import { Music, ListMusic } from 'lucide-react';
+import { Music, ListMusic, LogOut } from 'lucide-react';
 import { usePlayerStore } from '../store/usePlayerStore';
+import { useAuth } from '../contexts/AuthContext';
 
 
 interface LayoutProps {
@@ -15,6 +15,17 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const { isNowPlayingExpanded, setIsNowPlayingExpanded } = usePlayerStore();
+  const { user, signOut } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setShowUserMenu(false);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return (
     <div className="bg-black absolute top-0 left-0 right-0 min-h-screen text-white pb-24">
@@ -49,135 +60,53 @@ const Layout = ({ children }: LayoutProps) => {
             </Link>
           </nav>
         </div>
-        <UserButton
-          appearance={{
-            baseTheme: dark,
-            variables: {
-              colorPrimary: '#2563eb',
-              colorBackground: '#1f2937',
-              colorInputBackground: '#374151',
-              colorInputText: '#ffffff',
-              colorText: '#ffffff',
-              colorTextSecondary: '#9ca3af',
-              colorDanger: '#ef4444',
-              borderRadius: '0.5rem',
-            },
-            elements: {
-              avatarBox: 'w-9 h-9',
-              userButtonPopoverCard: {
-                backgroundColor: '#1f2937',
-                borderColor: '#374151',
-              },
-              userButtonPopoverActionButton: {
-                color: '#d1d5db',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#ffffff',
-                },
-              },
-              userButtonPopoverActionButtonText: {
-                color: '#d1d5db',
-              },
-              userButtonPopoverActionButtonIcon: {
-                color: '#9ca3af',
-              },
-              userButtonPopoverFooter: {
-                display: 'none',
-              },
-              userPreviewMainIdentifier: {
-                color: '#ffffff',
-              },
-              userPreviewSecondaryIdentifier: {
-                color: '#9ca3af',
-              },
-            },
-          }}
-          userProfileMode="modal"
-          userProfileProps={{
-            appearance: {
-              variables: {
-                colorPrimary: '#2563eb',
-                colorBackground: '#1f2937',
-                colorInputBackground: '#374151',
-                colorInputText: '#ffffff',
-                colorText: '#ffffff',
-                colorTextSecondary: '#9ca3af',
-                colorDanger: '#ef4444',
-                borderRadius: '0.5rem',
-              },
-              elements: {
-                rootBox: {
-                  backgroundColor: '#1f2937',
-                },
-                card: {
-                  backgroundColor: '#1f2937',
-                  color: '#ffffff',
-                },
-                navbar: {
-                  backgroundColor: '#111827',
-                },
-                navbarButton: {
-                  color: '#d1d5db',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: '#ffffff',
-                  },
-                },
-                navbarButtonIcon: {
-                  color: '#9ca3af',
-                },
-                headerTitle: {
-                  color: '#ffffff',
-                },
-                headerSubtitle: {
-                  color: '#9ca3af',
-                },
-                formButtonPrimary: {
-                  backgroundColor: '#2563eb',
-                  '&:hover': {
-                    backgroundColor: '#1d4ed8',
-                  },
-                },
-                formFieldLabel: {
-                  color: '#ffffff',
-                },
-                formFieldInput: {
-                  backgroundColor: '#374151',
-                  color: '#ffffff',
-                  borderColor: '#4b5563',
-                },
-                'formFieldInput::placeholder': {
-                  color: '#9ca3af',
-                },
-                profileSectionPrimaryButton: {
-                  color: '#60a5fa',
-                  '&:hover': {
-                    color: '#93c5fd',
-                  },
-                },
-                badge: {
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
-                },
-                accordionTriggerButton: {
-                  color: '#ffffff',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  },
-                },
-                accordionContent: {
-                  backgroundColor: '#374151',
-                },
-                modalContent: {
-                  backgroundColor: '#1f2937',
-                },
-                modalBackdrop: {
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                },
-              },
-            },
-          }}
-        />
+
+        {/* Custom User Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            {user?.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt={user.email || 'User'}
+                className="w-9 h-9 rounded-full"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
+                {user?.email?.[0].toUpperCase() || 'U'}
+              </div>
+            )}
+          </button>
+
+          {showUserMenu && (
+            <>
+              {/* Backdrop to close menu */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowUserMenu(false)}
+              />
+
+              {/* Menu Dropdown */}
+              <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-xl z-50 border border-gray-700">
+                <div className="px-4 py-3 border-b border-gray-700">
+                  <p className="text-sm font-medium text-white truncate">
+                    {user?.user_metadata?.full_name || user?.user_metadata?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                >
+                  <LogOut size={16} />
+                  Sign out
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Mobile Navigation Tabs */}

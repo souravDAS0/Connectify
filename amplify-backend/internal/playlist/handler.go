@@ -5,6 +5,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// RegisterRoutes registers playlist-related routes
+// Routes are PUBLIC for guest mode (users can view playlists without auth)
+// TODO: Add auth checks for mutations (create/update/delete) to restrict to authenticated users
 func RegisterRoutes(app *fiber.App, service *PlaylistService) {
 	// Create playlist
 	app.Post("/playlists", func(c *fiber.Ctx) error {

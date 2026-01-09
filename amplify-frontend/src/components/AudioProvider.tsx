@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { getStreamUrl } from '../api/tracks';
 import { sendWebSocketMessage } from '../api/websocket';
 import { usePlayerStore } from '../store/usePlayerStore';
+import { useIsActiveDevice } from '../hooks/useIsActiveDevice';
 
 /**
  * AudioProvider - Global audio element that persists across navigation.
@@ -15,7 +16,6 @@ const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         setIsPlaying,
         nextTrack,
         deviceId,
-        activeDeviceId,
         setPosition,
         seekTarget,
         setSeekTarget,
@@ -24,8 +24,8 @@ const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const audioRef = useRef<HTMLAudioElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
-    // Check if this device is the active player
-    const isActiveDevice = deviceId && deviceId === activeDeviceId;
+    // Check if this device is the active player (includes guest mode logic)
+    const isActiveDevice = useIsActiveDevice();
 
     // Audio playback control (play/pause)
     useEffect(() => {

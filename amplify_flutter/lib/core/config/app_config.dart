@@ -20,7 +20,9 @@ class AppConfig {
     return dotenv.env['WS_URL'] ?? 'ws://192.168.31.242:3000/ws';
   }
 
-  static String get clerkPublishableKey =>
-      dotenv.env['CLERK_PUBLISHABLE_KEY'] ??
-      'pk_test_bW9kZXJuLXdhbHJ1cy0xMC5jbGVyay5hY2NvdW50cy5kZXYk';
+  static String get supabaseUrl =>
+      dotenv.env['SUPABASE_URL'] ?? '';
+
+  static String get supabaseAnonKey =>
+      dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 }

@@ -39,7 +39,7 @@ final currentUserProvider = AutoDisposeFutureProvider<User?>.internal(
 );
 
 typedef CurrentUserRef = AutoDisposeFutureProviderRef<User?>;
-String _$authNotifierHash() => r'36e17e76df31c4c39ba507863966e8b566526441';
+String _$authNotifierHash() => r'dc40b09d55b3332dd2e89f9e06f758ad11887dac';
 
 /// Auth state notifier provider
 ///

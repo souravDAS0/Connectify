@@ -1,186 +1,174 @@
-import 'dart:convert';
+import 'package:amplify_flutter/core/constants/app_assets.dart';
+import 'package:amplify_flutter/core/constants/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/storage/local_storage_service.dart';
-
+import '../../../../routes/route_constants.dart';
 import '../providers/auth_provider.dart';
 
-/// Authentication page using WebView for Clerk
-class AuthWrapperPage extends ConsumerStatefulWidget {
+/// Authentication page with Google Sign-In
+class AuthWrapperPage extends ConsumerWidget {
   const AuthWrapperPage({super.key});
 
   @override
-  ConsumerState<AuthWrapperPage> createState() => _AuthWrapperPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authNotifierProvider);
 
-class _AuthWrapperPageState extends ConsumerState<AuthWrapperPage> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
+    // Listen to auth state changes
+    ref.listen(authNotifierProvider, (previous, next) {
+      next.when(
+        initial: () {},
+        loading: () {},
+        authenticated: (_) {
+          // Navigate to home when authenticated
+          context.go(RouteConstants.home);
+        },
+        unauthenticated: () {},
+        error: (message) {
+          // Show error snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      );
+    });
 
-  // Clerk Hosted Login URL
-  // You might need to change this if you have a custom domain or different path
-  static const String _clerkLoginUrl =
-      'https://modern-walrus-10.accounts.dev/sign-in';
-
-  // The URL that Clerk redirects to after login (configured in Clerk Dashboard)
-  // Usually it is your app's homepage or a callback URL.
-  // We'll watch for this to know when to extract data.
-  // Using a common default, but we will print ALL URLs to help debug.
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            // Update loading bar.
-          },
-          onPageStarted: (String url) {
-            print('[AuthWebView] Page started loading: $url');
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            print('[AuthWebView] Page finished loading: $url');
-            setState(() {
-              _isLoading = false;
-            });
-
-            _checkAuthStatus(url);
-          },
-          onWebResourceError: (WebResourceError error) {
-            print('[AuthWebView] Web resource error: ${error.description}');
-          },
-          onNavigationRequest: (NavigationRequest request) {
-            print('[AuthWebView] Navigation request: ${request.url}');
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(_clerkLoginUrl));
-  }
-
-  Future<void> _checkAuthStatus(String url) async {
-    try {
-      // If we are on a page that looks like a successful login
-      // logic: The user was redirected to the "default-redirect" or similar, or just NOT sign-in/up
-      if (url.contains('default-redirect') ||
-          (!url.contains('/sign-in') && !url.contains('/sign-up'))) {
-        print('[AuthWebView] Potential successful login detected at $url');
-
-        // Get cookies
-        final String cookies =
-            await _controller.runJavaScriptReturningResult('document.cookie')
-                as String;
-
-        // Extract __session token
-        // Format: ...; __session=eyJ...; ...
-        final RegExp sessionRegex = RegExp(r'__session=([^;]+)');
-        // Remove outer quotes if present from JS return value
-        final cleanCookies = cookies.replaceAll('"', '');
-        final match = sessionRegex.firstMatch(cleanCookies);
-
-        if (match != null) {
-          final token = match.group(1);
-          if (token != null && token.isNotEmpty) {
-            print(
-              '[AuthWebView] Found session token: ${token.substring(0, 20)}...',
-            );
-
-            try {
-              // Decode JWT to get user info
-              final parts = token.split('.');
-              if (parts.length >= 2) {
-                final payload = parts[1];
-                // Add padding if needed
-                String normalized = payload;
-                if (normalized.length % 4 > 0) {
-                  normalized += '=' * (4 - normalized.length % 4);
-                }
-
-                final String decoded = utf8.decode(
-                  base64Url.decode(normalized),
-                );
-                final Map<String, dynamic> data = jsonDecode(decoded);
-
-                print('[AuthWebView] JWT Payload: $data');
-
-                final userId = data['sub'] as String?;
-
-                // Create user object map directly to avoid Hive type errors
-                // The serialized map must match what UserModel.fromJson expects.
-                // IMPORTANT: All values must be primitives (String, int, bool, List, Map) supported by JSON/Hive.
-                final userMap = {
-                  'id': userId ?? 'unknown',
-                  'email_addresses': [
-                    {'email_address': 'user@example.com'},
-                  ],
-                  'first_name': 'User',
-                  'last_name': '',
-                  'profile_image_url': null,
-                  'created_at': DateTime.now().millisecondsSinceEpoch,
-                  'updated_at': DateTime.now().millisecondsSinceEpoch,
-                };
-
-                // Save to local storage manually
-                await LocalStorageService.saveAuthToken(token);
-                await LocalStorageService.saveUserObject(userMap);
-                await LocalStorageService.saveUserId(userId ?? 'unknown');
-
-                print(
-                  '[AuthWebView] User cached manually, refreshing auth state',
-                );
-
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Login Successful! Redirecting...'),
-                    ),
-                  );
-                }
-
-                // Refresh our app's auth state
-                await ref.read(authNotifierProvider.notifier).refresh();
-              }
-            } catch (e) {
-              print('[AuthWebView] Error decoding JWT: $e');
-            }
-          }
-        } else {
-          print('[AuthWebView] No __session cookie found yet.');
-        }
-      }
-    } catch (e) {
-      print('[AuthWebView] Error probing page: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.gray900,
-      appBar: AppBar(
-        title: const Text('Sign In'),
-        backgroundColor: AppColors.gray900,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _controller.reload(),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+
+              // App Logo or Icon
+              Container(
+                height: MediaQuery.of(context).size.width * 0.25,
+                child: Image.asset(AppAssets.logoFull),
+              ),
+              const SizedBox(height: 12),
+
+              // Welcome Text
+              Text(
+                'Your collaborative music streaming experience',
+                style: AppTypography.body1.copyWith(color: AppColors.gray400),
+                textAlign: TextAlign.center,
+              ),
+
+              const Spacer(),
+
+              // Google Sign-In Button
+              authState.when(
+                initial: () => _buildGoogleSignInButton(context, ref, false),
+                loading: () => _buildLoadingButton(),
+                authenticated: (_) =>
+                    _buildGoogleSignInButton(context, ref, false),
+                unauthenticated: () =>
+                    _buildGoogleSignInButton(context, ref, false),
+                error: (_) => _buildGoogleSignInButton(context, ref, false),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Continue as Guest Button
+              OutlinedButton.icon(
+                onPressed: () {
+                  context.go(RouteConstants.home);
+                },
+                icon: const Icon(Icons.person_outline),
+                label: const Text('Continue as Guest'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.white,
+                  side: BorderSide(color: AppColors.gray600),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Terms and Privacy
+              Text(
+                'By continuing, you agree to our Terms of Service and Privacy Policy',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_isLoading) const Center(child: CircularProgressIndicator()),
-        ],
+    );
+  }
+
+  Widget _buildGoogleSignInButton(
+    BuildContext context,
+    WidgetRef ref,
+    bool isLoading,
+  ) {
+    return ElevatedButton.icon(
+      onPressed: isLoading
+          ? null
+          : () {
+              ref.read(authNotifierProvider.notifier).signInWithGoogle();
+            },
+      icon: Container(
+        width: 24,
+        height: 24,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Text(
+            'G',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+      label: const Text('Continue with Google'),
+      style: ElevatedButton.styleFrom(
+        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.blue500,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildLoadingButton() {
+    return ElevatedButton(
+      onPressed: null,
+      style: ElevatedButton.styleFrom(
+        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.blue500,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: const SizedBox(
+        height: 24,
+        width: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
       ),
     );
   }

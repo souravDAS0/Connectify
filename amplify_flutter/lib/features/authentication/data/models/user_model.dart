@@ -3,29 +3,27 @@ import '../../domain/entities/user.dart';
 
 part 'user_model.g.dart';
 
-/// User model for data layer (maps from Clerk user)
+/// User model for data layer (maps from Supabase profiles)
 @JsonSerializable()
 class UserModel {
   final String id;
-  @JsonKey(name: 'email_addresses')
-  final List<EmailAddress>? emailAddresses;
-  @JsonKey(name: 'first_name')
-  final String? firstName;
-  @JsonKey(name: 'last_name')
-  final String? lastName;
-  @JsonKey(name: 'profile_image_url')
-  final String? profileImageUrl;
+  final String email;
+  @JsonKey(name: 'full_name')
+  final String? fullName;
+  @JsonKey(name: 'avatar_url')
+  final String? avatarUrl;
+  final String role;
   @JsonKey(name: 'created_at')
-  final int? createdAt;
+  final String? createdAt;
   @JsonKey(name: 'updated_at')
-  final int? updatedAt;
+  final String? updatedAt;
 
   const UserModel({
     required this.id,
-    this.emailAddresses,
-    this.firstName,
-    this.lastName,
-    this.profileImageUrl,
+    required this.email,
+    this.fullName,
+    this.avatarUrl,
+    this.role = 'user',
     this.createdAt,
     this.updatedAt,
   });
@@ -37,37 +35,52 @@ class UserModel {
   /// Convert to JSON
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 
-  /// Convert from Clerk user object
-  factory UserModel.fromClerkUser(dynamic clerkUser) {
+  /// Convert from Supabase user object (auth.users + profiles)
+  factory UserModel.fromSupabaseUser({
+    required Map<String, dynamic> authUser,
+    Map<String, dynamic>? profile,
+  }) {
+    final userMetadata = authUser['user_metadata'] as Map<String, dynamic>?;
+
     return UserModel(
-      id: clerkUser.id as String,
-      emailAddresses: clerkUser.emailAddresses != null
-          ? (clerkUser.emailAddresses as List)
-                .map((e) => EmailAddress.fromJson(e as Map<String, dynamic>))
-                .toList()
-          : null,
-      firstName: clerkUser.firstName as String?,
-      lastName: clerkUser.lastName as String?,
-      profileImageUrl: clerkUser.profileImageUrl as String?,
-      createdAt: clerkUser.createdAt as int?,
-      updatedAt: clerkUser.updatedAt as int?,
+      id: authUser['id'] as String,
+      email: authUser['email'] as String,
+      fullName: profile?['full_name'] as String? ??
+                userMetadata?['full_name'] as String? ??
+                userMetadata?['name'] as String?,
+      avatarUrl: profile?['avatar_url'] as String? ??
+                 userMetadata?['avatar_url'] as String?,
+      role: profile?['role'] as String? ?? 'user',
+      createdAt: authUser['created_at'] as String?,
+      updatedAt: authUser['updated_at'] as String?,
     );
   }
 
   /// Convert to User entity
   User toEntity() {
+    // Split fullName into firstName and lastName
+    String? firstName;
+    String? lastName;
+
+    if (fullName != null && fullName!.isNotEmpty) {
+      final parts = fullName!.split(' ');
+      if (parts.isNotEmpty) {
+        firstName = parts.first;
+        if (parts.length > 1) {
+          lastName = parts.sublist(1).join(' ');
+        }
+      }
+    }
+
     return User(
       id: id,
-      email: emailAddresses?.firstOrNull?.email,
+      email: email,
       firstName: firstName,
       lastName: lastName,
-      profileImageUrl: profileImageUrl,
-      createdAt: createdAt != null
-          ? DateTime.fromMillisecondsSinceEpoch(createdAt!)
-          : null,
-      updatedAt: updatedAt != null
-          ? DateTime.fromMillisecondsSinceEpoch(updatedAt!)
-          : null,
+      profileImageUrl: avatarUrl,
+      role: role,
+      createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
+      updatedAt: updatedAt != null ? DateTime.tryParse(updatedAt!) : null,
     );
   }
 
@@ -75,30 +88,12 @@ class UserModel {
   factory UserModel.fromEntity(User user) {
     return UserModel(
       id: user.id,
-      emailAddresses: user.email != null
-          ? [EmailAddress(email: user.email!)]
-          : null,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profileImageUrl: user.profileImageUrl,
-      createdAt: user.createdAt?.millisecondsSinceEpoch,
-      updatedAt: user.updatedAt?.millisecondsSinceEpoch,
+      email: user.email ?? '',
+      fullName: user.fullName,
+      avatarUrl: user.profileImageUrl,
+      role: user.role,
+      createdAt: user.createdAt?.toIso8601String(),
+      updatedAt: user.updatedAt?.toIso8601String(),
     );
   }
-}
-
-/// Email address model
-@JsonSerializable()
-class EmailAddress {
-  final String email;
-  @JsonKey(name: 'email_address')
-  final String? emailAddress;
-
-  EmailAddress({String? email, this.emailAddress})
-    : email = email ?? emailAddress ?? '';
-
-  factory EmailAddress.fromJson(Map<String, dynamic> json) =>
-      _$EmailAddressFromJson(json);
-
-  Map<String, dynamic> toJson() => _$EmailAddressToJson(this);
 }

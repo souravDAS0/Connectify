@@ -7,6 +7,7 @@ class User extends Equatable {
   final String? firstName;
   final String? lastName;
   final String? profileImageUrl;
+  final String role;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -16,6 +17,7 @@ class User extends Equatable {
     this.firstName,
     this.lastName,
     this.profileImageUrl,
+    this.role = 'user',
     this.createdAt,
     this.updatedAt,
   });
@@ -33,12 +35,15 @@ class User extends Equatable {
     return (first + last).toUpperCase();
   }
 
+  bool get isAdmin => role == 'admin';
+
   User copyWith({
     String? id,
     String? email,
     String? firstName,
     String? lastName,
     String? profileImageUrl,
+    String? role,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -48,6 +53,7 @@ class User extends Equatable {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -60,6 +66,7 @@ class User extends Equatable {
     firstName,
     lastName,
     profileImageUrl,
+    role,
     createdAt,
     updatedAt,
   ];

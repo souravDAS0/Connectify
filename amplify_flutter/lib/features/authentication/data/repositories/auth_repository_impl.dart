@@ -1,68 +1,167 @@
+import 'package:amplify_flutter/features/authentication/data/models/user_model.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/storage/local_storage_service.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
-import '../models/user_model.dart';
 
-/// Implementation of AuthRepository using Clerk SDK
-/// Note: clerk_flutter uses a different pattern where auth state is accessed via context
-/// For now, we'll use local storage until we can properly integrate Clerk state
+/// Implementation of AuthRepository using Supabase
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl();
+  final SupabaseClient _supabase;
+  late final GoogleSignIn _googleSignIn;
+
+  AuthRepositoryImpl() : _supabase = Supabase.instance.client {
+    _googleSignIn = GoogleSignIn.instance;
+    _googleSignIn.initialize(
+      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+    );
+  }
 
   @override
   Future<Either<Failure, User?>> getCurrentUser() async {
     try {
-      // Check cached user first
-      final cachedUser = getCachedUser();
-      if (cachedUser != null) {
-        return Right(cachedUser);
-      }
-
-      // In clerk_flutter 0.0.13-beta, auth state is managed by ClerkAuth widget
-      // and accessed via ClerkAuth.of(context), which requires a BuildContext
-      // For repository pattern, we'll rely on cached data from successful auth
-
-      // Check if authenticated via local storage
-      final isAuth = await isAuthenticated();
-      if (!isAuth) {
+      // Get current Supabase session
+      final session = _supabase.auth.currentSession;
+      if (session == null) {
         return const Right(null);
       }
 
-      // Try to get user from local storage
-      final userData = LocalStorageService.getUserObject();
-      if (userData != null) {
-        final userModel = UserModel.fromJson(userData);
-        return Right(userModel.toEntity());
-      }
+      // Get user from auth
+      final authUser = session.user;
 
-      return const Right(null);
+      // Fetch profile data from profiles table
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+      final userModel = UserModel.fromSupabaseUser(
+        authUser: authUser.toJson(),
+        profile: response,
+      );
+
+      final user = userModel.toEntity();
+
+      // Cache user locally
+      await cacheUser(user);
+
+      return Right(user);
     } catch (e) {
+      print('[AuthRepository] Error getting current user: $e');
       return Left(AuthFailure(e.toString()));
     }
   }
 
   @override
-  Stream<User?> watchAuthState() async* {
-    // In clerk_flutter, auth state changes are handled by ClerkAuthBuilder widget
-    // For now, emit cached user and let UI components use ClerkAuthBuilder
-    yield getCachedUser();
+  Stream<User?> watchAuthState() {
+    return _supabase.auth.onAuthStateChange.asyncMap((state) async {
+      print('[AuthRepository] Auth state changed: ${state.event}');
 
-    // Future enhancement: Use ClerkAuthState stream when available without context
+      if (state.session == null) {
+        await clearCachedUser();
+        return null;
+      }
+
+      try {
+        final authUser = state.session!.user;
+
+        // Fetch profile data
+        final response = await _supabase
+            .from('profiles')
+            .select()
+            .eq('id', authUser.id)
+            .maybeSingle();
+
+        final userModel = UserModel.fromSupabaseUser(
+          authUser: authUser.toJson(),
+          profile: response,
+        );
+
+        final user = userModel.toEntity();
+
+        // Cache user
+        await cacheUser(user);
+
+        return user;
+      } catch (e) {
+        print('[AuthRepository] Error in auth state stream: $e');
+        return null;
+      }
+    });
+  }
+
+  /// Sign in with Google OAuth
+  Future<Either<Failure, User>> signInWithGoogle() async {
+    try {
+      print('[AuthRepository] Starting Google Sign-In...');
+
+      // Sign in with Google
+      final googleUser = await _googleSignIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
+
+      print('[AuthRepository] Google sign-in successful: ${googleUser.email}');
+
+      // Get Google Auth tokens from the account
+      final authTokens = googleUser.authentication;
+      final idToken = authTokens.idToken;
+
+      if (idToken == null) {
+        return Left(AuthFailure('Failed to get Google ID token'));
+      }
+
+      print('[AuthRepository] Got Google ID token, signing in to Supabase...');
+
+      // Sign in to Supabase with Google ID token
+      // Note: google_sign_in 7.2.0+ only provides idToken, not accessToken
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+      );
+
+      if (response.user == null) {
+        return Left(AuthFailure('Failed to sign in to Supabase'));
+      }
+
+      print('[AuthRepository] Supabase sign-in successful');
+
+      // Get user with profile
+      final result = await getCurrentUser();
+      return result.fold(
+        (failure) => Left(failure),
+        (user) => user != null
+            ? Right(user)
+            : Left(AuthFailure('User is null after sign-in')),
+      );
+    } catch (e) {
+      print('[AuthRepository] Error signing in with Google: $e');
+      return Left(
+        AuthFailure('Failed to sign in with Google: ${e.toString()}'),
+      );
+    }
   }
 
   @override
   Future<Either<Failure, void>> signOut() async {
     try {
+      // Sign out from Google
+      await _googleSignIn.signOut();
+
+      // Sign out from Supabase
+      await _supabase.auth.signOut();
+
       // Clear local storage
-      // Actual sign out from Clerk is handled by ClerkAuth widget
       await clearCachedUser();
       await LocalStorageService.deleteAuthToken();
       await LocalStorageService.deleteUserId();
 
       return const Right(null);
     } catch (e) {
+      print('[AuthRepository] Error signing out: $e');
       return Left(AuthFailure('Failed to sign out: ${e.toString()}'));
     }
   }
@@ -70,9 +169,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<bool> isAuthenticated() async {
     try {
-      // Check local storage for auth status
-      // In production, this would be synced with Clerk session
-      return await LocalStorageService.isLoggedIn();
+      final session = _supabase.auth.currentSession;
+      return session != null;
     } catch (e) {
       return false;
     }
@@ -87,6 +185,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final userModel = UserModel.fromJson(userData);
       return userModel.toEntity();
     } catch (e) {
+      print('[AuthRepository] Error getting cached user: $e');
       return null;
     }
   }
@@ -97,9 +196,14 @@ class AuthRepositoryImpl implements AuthRepository {
       final userModel = UserModel.fromEntity(user);
       await LocalStorageService.saveUserObject(userModel.toJson());
       await LocalStorageService.saveUserId(user.id);
+
+      // Save token if available
+      final session = _supabase.auth.currentSession;
+      if (session != null) {
+        await LocalStorageService.saveAuthToken(session.accessToken);
+      }
     } catch (e) {
-      // Log error but don't throw
-      print('Error caching user: $e');
+      print('[AuthRepository] Error caching user: $e');
     }
   }
 
@@ -109,8 +213,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await LocalStorageService.deleteUserData('user_data');
       await LocalStorageService.deleteUserId();
     } catch (e) {
-      // Log error but don't throw
-      print('Error clearing cached user: $e');
+      print('[AuthRepository] Error clearing cached user: $e');
     }
   }
 }

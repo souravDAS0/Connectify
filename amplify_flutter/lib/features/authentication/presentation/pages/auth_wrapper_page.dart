@@ -2,6 +2,7 @@ import 'package:amplify_flutter/core/constants/app_assets.dart';
 import 'package:amplify_flutter/core/constants/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../routes/route_constants.dart';
@@ -132,21 +133,12 @@ class AuthWrapperPage extends ConsumerWidget {
           color: Colors.white,
           shape: BoxShape.circle,
         ),
-        child: const Center(
-          child: Text(
-            'G',
-            style: TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
+        child: Center(child: SvgPicture.asset(AppAssets.googleLogo)),
       ),
       label: const Text('Continue with Google'),
       style: ElevatedButton.styleFrom(
-        foregroundColor: AppColors.white,
-        backgroundColor: AppColors.blue500,
+        backgroundColor: AppColors.white,
+        foregroundColor: AppColors.background,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

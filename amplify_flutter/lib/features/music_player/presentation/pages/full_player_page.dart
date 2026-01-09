@@ -1,8 +1,12 @@
+import 'package:amplify_flutter/features/authentication/presentation/providers/auth_provider.dart';
+import 'package:amplify_flutter/features/music_player/presentation/providers/websocket_provider.dart';
+import 'package:amplify_flutter/features/music_player/presentation/widgets/active_devices_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:amplify_flutter/features/music_player/presentation/providers/player_controller.dart';
 import 'package:amplify_flutter/features/music_player/application/audio_player_service.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class FullPlayerPage extends ConsumerWidget {
@@ -19,12 +23,20 @@ class FullPlayerPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final playerState = ref.watch(playerControllerProvider);
     final track = playerState.currentTrack;
+    final authState = ref.watch(authNotifierProvider);
+    final isConnected = ref.watch(webSocketServiceProvider).isConnected;
 
     // Listen to audio service streams for real-time updates
     final audioService = ref.watch(audioPlayerServiceProvider);
 
     if (track == null)
       return const Scaffold(body: Center(child: Text("No track playing")));
+
+    // Check if user is authenticated
+    final isAuthenticated = authState.maybeWhen(
+      authenticated: (_) => true,
+      orElse: () => false,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -36,8 +48,50 @@ class FullPlayerPage extends ConsumerWidget {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          if (isAuthenticated) ...[
+            InkWell(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    LucideIcons.smartphone,
+                    color: isConnected ? Colors.green : Colors.grey,
+                  ),
+                  // Connection indicator
+                  if (isConnected)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF101826),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  builder: (context) => const ActiveDevicesBottomSheet(),
+                );
+              },
+            ),
+          ],
+          const SizedBox(width: 16),
+        ],
       ),
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false,
       body: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         decoration: BoxDecoration(
@@ -92,7 +146,13 @@ class FullPlayerPage extends ConsumerWidget {
             StreamBuilder<Duration>(
               stream: audioService.positionStream,
               builder: (context, snapshot) {
-                final position = snapshot.data ?? Duration.zero;
+                // Use playerState.position when device is not active (watching other devices)
+                // Use audioService position when device is active (playing locally)
+                final isActiveDevice = ref.watch(isCurrentDeviceActiveProvider);
+                final position = isActiveDevice
+                    ? (snapshot.data ?? playerState.position)
+                    : playerState.position;
+
                 final duration = Duration(
                   milliseconds: (track.duration * 1000).toInt(),
                 );
@@ -110,6 +170,9 @@ class FullPlayerPage extends ConsumerWidget {
                           Duration(milliseconds: value.toInt()),
                         );
                       },
+                      activeColor: const Color.fromARGB(255, 44, 44, 44),
+                      inactiveColor: const Color.fromARGB(255, 44, 44, 44),
+                      thumbColor: const Color.fromARGB(255, 255, 255, 255),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -130,19 +193,49 @@ class FullPlayerPage extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.shuffle),
-                  onPressed: () {
-                    // TODO: Toggle shuffle
-                  },
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.shuffle,
+                        color: playerState.isShuffleEnabled
+                            ? Colors.green
+                            : Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        ref
+                            .read(playerControllerProvider.notifier)
+                            .toggleShuffle(!playerState.isShuffleEnabled);
+                      },
+                    ),
+                    if (playerState.isShuffleEnabled)
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.green,
+                        ),
+                      ),
+                  ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.skip_previous, size: 36),
+                  icon: const Icon(LucideIcons.skipBack, size: 28),
                   onPressed: () {
                     ref.read(playerControllerProvider.notifier).prevTrack();
                   },
                 ),
                 FloatingActionButton(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  shape: playerState.isPlaying
+                      ? RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        )
+                      : CircleBorder(),
                   onPressed: () {
                     ref
                         .read(playerControllerProvider.notifier)
@@ -155,16 +248,45 @@ class FullPlayerPage extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.skip_next, size: 36),
+                  icon: const Icon(LucideIcons.skipForward, size: 28),
                   onPressed: () {
                     ref.read(playerControllerProvider.notifier).nextTrack();
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.repeat),
-                  onPressed: () {
-                    // TODO: Toggle repeat
-                  },
+                Column(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        playerState.repeatMode == LoopMode.one
+                            ? LucideIcons.repeat1
+                            : LucideIcons.repeat,
+                        color: playerState.repeatMode != LoopMode.off
+                            ? Colors.green
+                            : Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        final nextMode = playerState.repeatMode == LoopMode.off
+                            ? LoopMode.all
+                            : playerState.repeatMode == LoopMode.all
+                            ? LoopMode.one
+                            : LoopMode.off;
+                        ref
+                            .read(playerControllerProvider.notifier)
+                            .setRepeatMode(nextMode);
+                      },
+                    ),
+                    if (playerState.repeatMode == LoopMode.one ||
+                        playerState.repeatMode == LoopMode.all)
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.green,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),

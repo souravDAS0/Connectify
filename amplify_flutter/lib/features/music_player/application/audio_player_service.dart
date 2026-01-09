@@ -5,7 +5,8 @@ import 'package:amplify_flutter/features/music_player/domain/models/track.dart';
 import 'package:amplify_flutter/core/config/app_config.dart';
 
 final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
-  return AudioPlayerService();
+  final service = AudioPlayerService();
+  return service;
 });
 
 class AudioPlayerService {
@@ -35,6 +36,8 @@ class AudioPlayerService {
             id: track.id,
             artist: track.artist,
             title: track.title,
+            album: track.album,
+            duration: Duration(milliseconds: (track.duration * 1000).toInt()),
             artUri: track.albumArtUrl != null
                 ? Uri.parse(track.albumArtUrl!)
                 : null,
@@ -63,6 +66,15 @@ class AudioPlayerService {
 
   Future<void> setLoopMode(LoopMode mode) async {
     await _audioPlayer.setLoopMode(mode);
+  }
+
+  Future<void> shutdown() async {
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.dispose();
+    } catch (e) {
+      // Ignore errors during shutdown
+    }
   }
 
   void dispose() {

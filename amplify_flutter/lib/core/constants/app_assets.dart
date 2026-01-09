@@ -13,4 +13,8 @@ class AppAssets {
 
   // Fonts
   static const String interFont = 'Inter';
+
+  //Icons
+  static const String _iconsPath = 'assets/icons';
+  static const String googleLogo = '$_iconsPath/google.svg';
 }

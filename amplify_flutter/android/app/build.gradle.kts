@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.amplify_flutter"
+    namespace = "com.amplify.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

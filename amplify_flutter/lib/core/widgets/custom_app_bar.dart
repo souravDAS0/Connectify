@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:amplify_flutter/core/constants/app_colors.dart';
 import 'package:amplify_flutter/core/widgets/app_logo.dart';
 import 'package:amplify_flutter/features/authentication/presentation/providers/auth_provider.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 class CustomAppBar extends ConsumerStatefulWidget {
   const CustomAppBar({super.key});
@@ -19,6 +22,46 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
   bool _showUserMenu = false;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
+  int? _starCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStarCount();
+  }
+
+  Future<void> _fetchStarCount() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/souravDAS0/Connectify'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _starCount = data['stargazers_count'];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch star count: $e');
+      if (mounted) {
+        setState(() {
+          _starCount = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    try {
+      // platformDefault will open in the GitHub app if available, otherwise browser
+      await launchUrl(url, mode: LaunchMode.platformDefault);
+    } catch (e) {
+      debugPrint('Failed to launch URL: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -95,6 +138,9 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
                   children: [
                     const AppLogo(useFullLogo: true, height: 50),
                     const Expanded(child: SizedBox()),
+                    // GitHub Star Button
+                    _buildGitHubStarButton(),
+                    const SizedBox(width: 16),
                     // User menu button
                     authState.maybeWhen(
                       authenticated: (user) => GestureDetector(
@@ -115,6 +161,73 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
             thickness: 1,
             height: 1,
             color: Color.fromARGB(20, 255, 255, 255),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGitHubStarButton() {
+    return Container(
+      height: 28,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Star button
+          InkWell(
+            onTap: () => _launchUrl('https://github.com/souravDAS0/Connectify'),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(6),
+              bottomLeft: Radius.circular(6),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border(
+                  right: BorderSide(color: Colors.white.withOpacity(0.2)),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.star, size: 12, color: Colors.grey[300]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Star',
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Count button
+          InkWell(
+            onTap: () => _launchUrl(
+              'https://github.com/souravDAS0/Connectify/stargazers',
+            ),
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(6),
+              bottomRight: Radius.circular(6),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Text(
+                _starCount?.toString() ?? '...',
+                style: TextStyle(
+                  color: Colors.grey[300],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ),
         ],
       ),

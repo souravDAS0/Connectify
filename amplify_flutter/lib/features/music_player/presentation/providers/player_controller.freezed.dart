@@ -23,6 +23,8 @@ mixin _$PlayerState {
   String? get error => throw _privateConstructorUsedError;
   Duration get position => throw _privateConstructorUsedError;
   Duration get duration => throw _privateConstructorUsedError;
+  bool get isShuffleEnabled => throw _privateConstructorUsedError;
+  ja.LoopMode get repeatMode => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $PlayerStateCopyWith<PlayerState> get copyWith =>
@@ -42,7 +44,9 @@ abstract class $PlayerStateCopyWith<$Res> {
       bool isLoading,
       String? error,
       Duration position,
-      Duration duration});
+      Duration duration,
+      bool isShuffleEnabled,
+      ja.LoopMode repeatMode});
 
   $TrackCopyWith<$Res>? get currentTrack;
 }
@@ -67,6 +71,8 @@ class _$PlayerStateCopyWithImpl<$Res, $Val extends PlayerState>
     Object? error = freezed,
     Object? position = null,
     Object? duration = null,
+    Object? isShuffleEnabled = null,
+    Object? repeatMode = null,
   }) {
     return _then(_value.copyWith(
       tracks: null == tracks
@@ -97,6 +103,14 @@ class _$PlayerStateCopyWithImpl<$Res, $Val extends PlayerState>
           ? _value.duration
           : duration // ignore: cast_nullable_to_non_nullable
               as Duration,
+      isShuffleEnabled: null == isShuffleEnabled
+          ? _value.isShuffleEnabled
+          : isShuffleEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      repeatMode: null == repeatMode
+          ? _value.repeatMode
+          : repeatMode // ignore: cast_nullable_to_non_nullable
+              as ja.LoopMode,
     ) as $Val);
   }
 
@@ -128,7 +142,9 @@ abstract class _$$PlayerStateImplCopyWith<$Res>
       bool isLoading,
       String? error,
       Duration position,
-      Duration duration});
+      Duration duration,
+      bool isShuffleEnabled,
+      ja.LoopMode repeatMode});
 
   @override
   $TrackCopyWith<$Res>? get currentTrack;
@@ -152,6 +168,8 @@ class __$$PlayerStateImplCopyWithImpl<$Res>
     Object? error = freezed,
     Object? position = null,
     Object? duration = null,
+    Object? isShuffleEnabled = null,
+    Object? repeatMode = null,
   }) {
     return _then(_$PlayerStateImpl(
       tracks: null == tracks
@@ -182,13 +200,21 @@ class __$$PlayerStateImplCopyWithImpl<$Res>
           ? _value.duration
           : duration // ignore: cast_nullable_to_non_nullable
               as Duration,
+      isShuffleEnabled: null == isShuffleEnabled
+          ? _value.isShuffleEnabled
+          : isShuffleEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      repeatMode: null == repeatMode
+          ? _value.repeatMode
+          : repeatMode // ignore: cast_nullable_to_non_nullable
+              as ja.LoopMode,
     ));
   }
 }
 
 /// @nodoc
 
-class _$PlayerStateImpl implements _PlayerState {
+class _$PlayerStateImpl with DiagnosticableTreeMixin implements _PlayerState {
   const _$PlayerStateImpl(
       {final List<Track> tracks = const [],
       this.currentTrack,
@@ -196,7 +222,9 @@ class _$PlayerStateImpl implements _PlayerState {
       this.isLoading = false,
       this.error,
       this.position = Duration.zero,
-      this.duration = Duration.zero})
+      this.duration = Duration.zero,
+      this.isShuffleEnabled = false,
+      this.repeatMode = ja.LoopMode.off})
       : _tracks = tracks;
 
   final List<Track> _tracks;
@@ -224,10 +252,32 @@ class _$PlayerStateImpl implements _PlayerState {
   @override
   @JsonKey()
   final Duration duration;
+  @override
+  @JsonKey()
+  final bool isShuffleEnabled;
+  @override
+  @JsonKey()
+  final ja.LoopMode repeatMode;
 
   @override
-  String toString() {
-    return 'PlayerState(tracks: $tracks, currentTrack: $currentTrack, isPlaying: $isPlaying, isLoading: $isLoading, error: $error, position: $position, duration: $duration)';
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
+    return 'PlayerState(tracks: $tracks, currentTrack: $currentTrack, isPlaying: $isPlaying, isLoading: $isLoading, error: $error, position: $position, duration: $duration, isShuffleEnabled: $isShuffleEnabled, repeatMode: $repeatMode)';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty('type', 'PlayerState'))
+      ..add(DiagnosticsProperty('tracks', tracks))
+      ..add(DiagnosticsProperty('currentTrack', currentTrack))
+      ..add(DiagnosticsProperty('isPlaying', isPlaying))
+      ..add(DiagnosticsProperty('isLoading', isLoading))
+      ..add(DiagnosticsProperty('error', error))
+      ..add(DiagnosticsProperty('position', position))
+      ..add(DiagnosticsProperty('duration', duration))
+      ..add(DiagnosticsProperty('isShuffleEnabled', isShuffleEnabled))
+      ..add(DiagnosticsProperty('repeatMode', repeatMode));
   }
 
   @override
@@ -246,7 +296,11 @@ class _$PlayerStateImpl implements _PlayerState {
             (identical(other.position, position) ||
                 other.position == position) &&
             (identical(other.duration, duration) ||
-                other.duration == duration));
+                other.duration == duration) &&
+            (identical(other.isShuffleEnabled, isShuffleEnabled) ||
+                other.isShuffleEnabled == isShuffleEnabled) &&
+            (identical(other.repeatMode, repeatMode) ||
+                other.repeatMode == repeatMode));
   }
 
   @override
@@ -258,7 +312,9 @@ class _$PlayerStateImpl implements _PlayerState {
       isLoading,
       error,
       position,
-      duration);
+      duration,
+      isShuffleEnabled,
+      repeatMode);
 
   @JsonKey(ignore: true)
   @override
@@ -275,7 +331,9 @@ abstract class _PlayerState implements PlayerState {
       final bool isLoading,
       final String? error,
       final Duration position,
-      final Duration duration}) = _$PlayerStateImpl;
+      final Duration duration,
+      final bool isShuffleEnabled,
+      final ja.LoopMode repeatMode}) = _$PlayerStateImpl;
 
   @override
   List<Track> get tracks;
@@ -291,6 +349,10 @@ abstract class _PlayerState implements PlayerState {
   Duration get position;
   @override
   Duration get duration;
+  @override
+  bool get isShuffleEnabled;
+  @override
+  ja.LoopMode get repeatMode;
   @override
   @JsonKey(ignore: true)
   _$$PlayerStateImplCopyWith<_$PlayerStateImpl> get copyWith =>

@@ -2,7 +2,7 @@ import React, { useEffect, Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import LoadingAnimation from './components/LoadingAnimation';
 import AudioProvider from './components/AudioProvider';
@@ -12,27 +12,26 @@ import { initWebSocket } from './api/websocket';
 // Lazy load page components
 const TrackList = lazy(() => import('./components/TrackList'));
 const Login = lazy(() => import('./pages/Login'));
-const Signup = lazy(() => import('./pages/Signup'));
 const TestLoading = lazy(() => import('./pages/TestLoading'));
 const NowPlayingPage = lazy(() => import('./pages/NowPlayingPage'));
 const PlaylistsPage = lazy(() => import('./pages/PlaylistsPage'));
 const PlaylistDetailPage = lazy(() => import('./pages/PlaylistDetailPage'));
 
-// Protected Route Component using Clerk
+// Protected Route Component using Supabase
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { user, loading } = useAuth();
 
-  if (!isLoaded) {
+  if (loading) {
     return <LoadingAnimation />;
   }
 
-  return isSignedIn ? <>{children}</> : <Navigate to="/login" />;
+  return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const queryClient = new QueryClient();
 
 function App() {
-  const { isSignedIn, getToken } = useAuth();
+  const { session } = useAuth();
   const setDeviceId = usePlayerStore((state) => state.setDeviceId);
 
   useEffect(() => {
@@ -54,15 +53,11 @@ function App() {
     setDeviceId(deviceId);
 
     // Initialize WebSocket if authenticated
-    if (isSignedIn && deviceId) {
-      getToken().then((token) => {
-        if (token) {
-          const cleanup = initWebSocket(token, deviceId);
-          return cleanup;
-        }
-      });
+    if (session?.access_token && deviceId) {
+      const cleanup = initWebSocket(session.access_token, deviceId);
+      return cleanup;
     }
-  }, [isSignedIn, getToken, setDeviceId]);
+  }, [session, setDeviceId]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -72,7 +67,7 @@ function App() {
           <Suspense fallback={<LoadingAnimation />}>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+              <Route path="/signup" element={<Navigate to="/login" />} />
               <Route path="/test-loading" element={<TestLoading />} />
 
               <Route

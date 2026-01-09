@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../contexts/AuthContext';
 import { createPlaylist, updatePlaylist, getPlaylistById, addTrackToPlaylist, removeTrackFromPlaylist } from '../api/playlists';
 import { getTracks } from '../api/tracks';
 import { X, Search, Plus, Trash2, ListMusic } from 'lucide-react';
@@ -14,7 +14,7 @@ interface CreatePlaylistModalProps {
 
 const CreatePlaylistModal: React.FC<CreatePlaylistModalProps> = ({ playlistId, isOpen, onClose }) => {
     const queryClient = useQueryClient();
-    const { user } = useUser();
+    const { user } = useAuth();
     const isEdit = !!playlistId;
     const [searchTerm, setSearchTerm] = useState('');
     const [formData, setFormData] = useState({

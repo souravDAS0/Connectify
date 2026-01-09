@@ -98,18 +98,20 @@ class MiniPlayer extends ConsumerWidget {
                 ref.read(playerControllerProvider.notifier).togglePlayPause();
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             InkWell(
               child: Icon(LucideIcons.skipForward, fill: 1),
               onTap: () {
                 ref.read(playerControllerProvider.notifier).nextTrack();
               },
             ),
-            const SizedBox(width: 8),
-            InkWell(
-              child: Icon(LucideIcons.smartphone, color: Colors.grey),
-              onTap: () {},
-            ),
+            ...[
+              const SizedBox(width: 12),
+              InkWell(
+                child: Icon(LucideIcons.smartphone, color: Colors.grey),
+                onTap: () {},
+              ),
+            ],
           ],
         ),
       ),

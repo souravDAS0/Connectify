@@ -3,14 +3,28 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'core/config/app_config.dart';
 import 'core/storage/local_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'routes/app_router.dart';
+import 'features/music_player/application/audio_player_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize background audio for persistent notifications
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.amplify.app.audio',
+    androidNotificationChannelName: 'Audio Playback',
+    androidNotificationChannelDescription: 'Playing music in the background',
+    androidNotificationOngoing: false,
+    androidShowNotificationBadge: true,
+    androidNotificationIcon: 'mipmap/ic_launcher',
+    androidStopForegroundOnPause: false,  // Keep notification when paused (Spotify-like)
+  );
+
   await dotenv.load(fileName: ".env");
 
   // Initialize Supabase
@@ -44,11 +58,43 @@ void main() async {
   runApp(const ProviderScope(child: AmplifyApp()));
 }
 
-class AmplifyApp extends ConsumerWidget {
+class AmplifyApp extends ConsumerStatefulWidget {
   const AmplifyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AmplifyApp> createState() => _AmplifyAppState();
+}
+
+class _AmplifyAppState extends ConsumerState<AmplifyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Only stop playback when app is being permanently terminated
+    if (state == AppLifecycleState.detached) {
+      try {
+        final audioService = ref.read(audioPlayerServiceProvider);
+        audioService.shutdown();
+      } catch (e) {
+        // Ignore errors if service doesn't exist
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Watch router provider
     final router = ref.watch(goRouterProvider);
 

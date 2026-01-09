@@ -89,12 +89,15 @@ func main() {
 		BodyLimit:             15 * 1024 * 1024, // 15MB
 	})
 
-	// Add CORS middleware with WebSocket support
+	// Register WebSocket routes BEFORE CORS middleware
+	// WebSocket doesn't use CORS and CORS middleware can interfere with upgrades
+	websocket.RegisterWebSocketRoutesWithSupabase(app, hub, supabaseConfig)
+
+	// Add CORS middleware (after WebSocket routes)
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,Upgrade,Connection,Sec-WebSocket-Key,Sec-WebSocket-Version,Sec-WebSocket-Extensions",
-		AllowCredentials: false,
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders: "*",
 	}))
 
 	// Initialize services
@@ -106,9 +109,6 @@ func main() {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
-
-	// Register WebSocket routes with Supabase auth
-	websocket.RegisterWebSocketRoutesWithSupabase(app, hub, supabaseConfig)
 
 	// Register public music routes (tracks listing, streaming)
 	app.Get("/tracks", func(c *fiber.Ctx) error {

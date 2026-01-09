@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import PlayerControls from './PlayerControls';
 import NowPlayingOverlay from './NowPlayingOverlay';
+import GuestModeBanner from './GuestModeBanner';
 import { Music, ListMusic, LogOut, Star } from 'lucide-react';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,7 +79,7 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
 
         {/* GitHub Star Button */}
-        <div className='flex items-center gap-5'>
+        <div className={`flex items-center ${user ? 'gap-6' : ''}`}>
 
 
           <div className="flex items-center ">
@@ -105,26 +106,30 @@ const Layout = ({ children }: LayoutProps) => {
 
 
 
-          {/* Custom User Menu */}
+          {/* User Menu or Sign In */}
           <div className="relative">
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            >
-              {user?.user_metadata?.avatar_url ? (
-                <img
-                  src={user.user_metadata.avatar_url}
-                  alt={user.email || 'User'}
-                  className="w-9 h-9 rounded-full"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
-                  {user?.email?.[0].toUpperCase() || 'U'}
-                </div>
-              )}
-            </button>
+            {
+              user &&
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                {user?.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt={user.email || 'User'}
+                    className="w-9 h-9 rounded-full"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
+                    {user?.email?.[0].toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
+            }
 
-            {showUserMenu && (
+
+            {user && showUserMenu && (
               <>
                 {/* Backdrop to close menu */}
                 <div
@@ -136,9 +141,9 @@ const Layout = ({ children }: LayoutProps) => {
                 <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-xl z-50 border border-gray-700">
                   <div className="px-4 py-3 border-b border-gray-700">
                     <p className="text-sm font-medium text-white truncate">
-                      {user?.user_metadata?.full_name || user?.user_metadata?.name || 'User'}
+                      {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
                     </p>
-                    <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                    <p className="text-xs text-gray-400 truncate">{user.email}</p>
                   </div>
                   <button
                     onClick={handleSignOut}
@@ -154,6 +159,9 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
 
       </header>
+
+      {/* Guest Mode Banner */}
+      {!user && <GuestModeBanner />}
 
       {/* Mobile Navigation Tabs */}
       <nav className="md:hidden flex border-b border-white/10">

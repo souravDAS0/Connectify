@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -16,17 +16,6 @@ const TestLoading = lazy(() => import('./pages/TestLoading'));
 const NowPlayingPage = lazy(() => import('./pages/NowPlayingPage'));
 const PlaylistsPage = lazy(() => import('./pages/PlaylistsPage'));
 const PlaylistDetailPage = lazy(() => import('./pages/PlaylistDetailPage'));
-
-// Protected Route Component using Supabase
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <LoadingAnimation />;
-  }
-
-  return user ? <>{children}</> : <Navigate to="/login" />;
-};
 
 const queryClient = new QueryClient();
 
@@ -73,44 +62,34 @@ function App() {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <TrackList />
-                    </Layout>
-                  </ProtectedRoute>
+                  <Layout>
+                    <TrackList />
+                  </Layout>
                 }
               />
 
               {/* Mobile Now Playing expanded view */}
               <Route
                 path="/now-playing/:id"
-                element={
-                  <ProtectedRoute>
-                    <NowPlayingPage />
-                  </ProtectedRoute>
-                }
+                element={<NowPlayingPage />}
               />
 
               {/* Playlists */}
               <Route
                 path="/playlists"
                 element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <PlaylistsPage />
-                    </Layout>
-                  </ProtectedRoute>
+                  <Layout>
+                    <PlaylistsPage />
+                  </Layout>
                 }
               />
 
               <Route
                 path="/playlists/:id"
                 element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <PlaylistDetailPage />
-                    </Layout>
-                  </ProtectedRoute>
+                  <Layout>
+                    <PlaylistDetailPage />
+                  </Layout>
                 }
               />
             </Routes>

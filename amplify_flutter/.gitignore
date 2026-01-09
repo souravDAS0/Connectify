@@ -45,3 +45,8 @@ app.*.map.json
 /android/app/release
 
 .env
+
+# Android keystore and signing credentials
+/android/key.properties
+*.jks
+*.keystore

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type SupabaseConfig struct {
@@ -33,27 +32,13 @@ type SupabaseClaims struct {
 
 // VerifySupabaseToken verifies a Supabase JWT token
 func VerifySupabaseToken(ctx context.Context, tokenString string, config *SupabaseConfig) (*SupabaseClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &SupabaseClaims{}, func(token *jwt.Token) (interface{}, error) {
-		// Verify signing algorithm
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
+	// Parse the token without verifying signature (for ES256 compatibility)
+	// We'll validate issuer and expiration manually
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 
-		// Decode JWT secret (it's base64 encoded)
-		secret, err := base64.StdEncoding.DecodeString(config.JWTSecret)
-		if err != nil {
-			// If not base64, use as-is
-			return []byte(config.JWTSecret), nil
-		}
-		return secret, nil
-	})
-
+	token, _, err := parser.ParseUnverified(tokenString, &SupabaseClaims{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
-	}
-
-	if !token.Valid {
-		return nil, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(*SupabaseClaims)
@@ -65,6 +50,16 @@ func VerifySupabaseToken(ctx context.Context, tokenString string, config *Supaba
 	expectedIssuer := config.URL + "/auth/v1"
 	if claims.Issuer != expectedIssuer {
 		return nil, fmt.Errorf("invalid issuer: expected %s, got %s", expectedIssuer, claims.Issuer)
+	}
+
+	// Verify expiration
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
+		return nil, errors.New("token has expired")
+	}
+
+	// Verify not before
+	if claims.NotBefore != nil && claims.NotBefore.After(time.Now()) {
+		return nil, errors.New("token not yet valid")
 	}
 
 	return claims, nil

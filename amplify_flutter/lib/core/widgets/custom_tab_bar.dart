@@ -51,6 +51,7 @@ class _CustomTabBarState extends State<CustomTabBar>
       children: [
         Container(
           decoration: const BoxDecoration(color: Colors.black),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             children: [
               TabBar(

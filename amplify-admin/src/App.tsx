@@ -1,7 +1,9 @@
-import { useAuth, useUser } from '@clerk/clerk-react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/Login';
@@ -21,10 +23,39 @@ const queryClient = new QueryClient({
 
 // Admin Protected Route - checks both auth AND admin role
 const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user } = useUser();
+  const { user, loading } = useAuth();
+  const [role, setRole] = useState<string | null>(null);
+  const [checkingRole, setCheckingRole] = useState(true);
 
-  if (!isLoaded) {
+  useEffect(() => {
+    async function checkAdminRole() {
+      if (!user) {
+        setCheckingRole(false);
+        return;
+      }
+
+      try {
+        // Fetch role from Supabase profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        setRole(data?.role || 'user');
+      } catch (error) {
+        console.error('Error fetching role:', error);
+        setRole('user');
+      } finally {
+        setCheckingRole(false);
+      }
+    }
+
+    checkAdminRole();
+  }, [user]);
+
+  if (loading || checkingRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-gray-600">Loading...</div>
@@ -32,19 +63,18 @@ const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!isSignedIn) {
+  if (!user) {
     return <Navigate to="/login" />;
   }
 
-  // Check if user has admin role in public metadata
-  const isAdmin = user?.publicMetadata?.role === 'admin';
-
-  if (!isAdmin) {
+  // Check if user has admin role
+  if (role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
           <p className="text-gray-700">You do not have admin privileges.</p>
+          <p className="text-gray-500 text-sm mt-2">Contact your administrator to request access.</p>
         </div>
       </div>
     );

@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getAnalyticsStats } from '../api/analytics';
 import { getPopularTracks, getRecentTracks } from '../api/tracks';
 import { Music, PlayCircle, ListMusic, Users } from 'lucide-react';
-import { UserButton } from '@clerk/clerk-react';
-// import { dark } from "@clerk/themes";
 
 interface StatsCardProps {
   icon: React.ReactNode;
@@ -54,14 +52,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-8">
-      <div className='flex items-start justify-between w-full'>
-
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-
-        <UserButton
-          userProfileMode="modal"
-        />
-      </div>
+      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
       {/* Stats Grid */}
       {statsLoading ? (

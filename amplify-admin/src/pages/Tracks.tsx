@@ -4,7 +4,7 @@ import { getTracks, deleteTrack } from '../api/tracks';
 import UploadModal from '../components/UploadModal';
 import EditTrackModal from '../components/EditTrackModal';
 import toast from 'react-hot-toast';
-import { Music, Trash2, Upload, Edit, Disc } from 'lucide-react';
+import { Music, Trash2, Upload, Edit } from 'lucide-react';
 
 export default function Tracks() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);

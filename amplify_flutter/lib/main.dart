@@ -10,6 +10,8 @@ import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'routes/app_router.dart';
 import 'features/music_player/application/audio_player_service.dart';
+import 'features/music_player/presentation/providers/websocket_manager.dart';
+import 'features/music_player/presentation/providers/playback_sync_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,6 +72,12 @@ class _AmplifyAppState extends ConsumerState<AmplifyApp> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Initialize WebSocket manager and playback sync
+    Future.microtask(() {
+      ref.read(websocketManagerProvider);
+      ref.read(playbackSyncProvider);
+    });
   }
 
   @override

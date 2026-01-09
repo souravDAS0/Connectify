@@ -89,11 +89,12 @@ func main() {
 		BodyLimit:             15 * 1024 * 1024, // 15MB
 	})
 
-	// Add CORS middleware
+	// Add CORS middleware with WebSocket support
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders: "*",
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,Upgrade,Connection,Sec-WebSocket-Key,Sec-WebSocket-Version,Sec-WebSocket-Extensions",
+		AllowCredentials: false,
 	}))
 
 	// Initialize services

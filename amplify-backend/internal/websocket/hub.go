@@ -15,6 +15,8 @@ import (
 )
 
 var fasthttpUpgrader = websocket.FastHTTPUpgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 	CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
 		return true // Allow all origins in development
 	},

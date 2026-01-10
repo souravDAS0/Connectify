@@ -7,7 +7,7 @@ export default function Sidebar() {
   // State management
   const [isExpanded, setIsExpanded] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [, setIsMobile] = useState(false);
 
   // Persist sidebar state and detect mobile
   useEffect(() => {

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'core/config/app_config.dart';
 import 'core/storage/local_storage_service.dart';
 import 'core/theme/app_theme.dart';
@@ -15,17 +14,6 @@ import 'features/music_player/presentation/providers/playback_sync_provider.dart
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize background audio for persistent notifications
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.amplify.app.audio',
-    androidNotificationChannelName: 'Audio Playback',
-    androidNotificationChannelDescription: 'Playing music in the background',
-    androidNotificationOngoing: false,
-    androidShowNotificationBadge: true,
-    androidNotificationIcon: 'mipmap/ic_launcher',
-    androidStopForegroundOnPause: false,  // Keep notification when paused (Spotify-like)
-  );
 
   await dotenv.load(fileName: ".env");
 
@@ -73,8 +61,9 @@ class _AmplifyAppState extends ConsumerState<AmplifyApp> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize WebSocket manager and playback sync
-    Future.microtask(() {
+    // Initialize audio service, WebSocket manager and playback sync
+    Future.microtask(() async {
+      await ref.read(audioPlayerServiceProvider).init();
       ref.read(websocketManagerProvider);
       ref.read(playbackSyncProvider);
     });

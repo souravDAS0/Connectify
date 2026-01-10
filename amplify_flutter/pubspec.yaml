@@ -70,7 +70,6 @@ dependencies:
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
   path_provider: ^2.1.4
-  just_audio_background: ^0.0.1-beta.17
   flutter_dotenv: ^6.0.0
   flutter_svg: ^2.2.3
   lucide_icons_flutter: ^3.1.9

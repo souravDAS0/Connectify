@@ -30,22 +30,12 @@ export interface Playlist {
 
 export interface User {
   id: string;
-  first_name: string;
-  last_name: string;
-  email_addresses: Array<{
-    id: string;
-    email_address: string;
-    verification: {
-      status: string;
-    };
-  }>;
-  primary_email_address_id: string;
-  image_url: string;
-  created_at: number;
-  updated_at: number;
-  last_sign_in_at: number;
-  // Legacy compatibility
-  email?: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+  role: 'user' | 'admin';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AnalyticsStats {

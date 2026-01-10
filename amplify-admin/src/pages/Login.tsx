@@ -1,17 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Logo from '../components/Logo';
 
 const Login: React.FC = () => {
   const { user, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [starCount, setStarCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (user) {
       navigate('/');
     }
   }, [user, navigate]);
+
+  // Fetch GitHub stars count
+  useEffect(() => {
+    fetch('https://api.github.com/repos/souravDAS0/Connectify')
+      .then(res => res.json())
+      .then(data => setStarCount(data.stargazers_count))
+      .catch(() => setStarCount(null));
+  }, []);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -24,34 +35,53 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="w-[100vw] min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl max-w-md w-full">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+      {/* GitHub Star Button - Top Right */}
+      <div className="absolute top-6 right-6">
+        <div className="flex items-center">
+          <a
+            href="https://github.com/souravDAS0/Connectify"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-l-lg hover:border-gray-400 hover:bg-white transition-colors text-gray-700 hover:text-gray-900"
+            title="Star on GitHub"
+          >
+            <Star size={14} />
+            <span className="hidden sm:inline">Star</span>
+          </a>
+          <a
+            href="https://github.com/souravDAS0/Connectify/stargazers"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-3 py-1.5 text-xs font-medium border border-l-0 border-gray-300 rounded-r-lg hover:border-gray-400 hover:bg-white transition-colors text-gray-700 hover:text-gray-900"
+            title="See stargazers"
+          >
+            {starCount ?? '...'}
+          </a>
+        </div>
+      </div>
+
+      {/* Login Card */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 max-w-md w-full">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-10 h-10 text-white"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z"
-              />
-            </svg>
+          {/* Logo */}
+          <div className="mb-6">
+            <Logo size="xl" variant="full" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome to Amplify</h1>
-          <p className="text-gray-400 text-center">Sign in to sync your music across all devices</p>
+
+          {/* Title and Description */}
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Admin Panel</h1>
+          <p className="text-sm text-gray-600 text-center">
+            Sign in to manage your music platform
+          </p>
         </div>
 
+        {/* Google Sign In Button */}
         <button
           onClick={handleGoogleSignIn}
-          className="w-full bg-white text-gray-900 py-3 px-4 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-3 mb-4"
+          className="w-full bg-white text-gray-900 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 border border-gray-300 hover:border-gray-400 shadow-sm"
         >
-          <svg className="w-6 h-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               fill="#4285F4"
@@ -69,13 +99,22 @@ const Login: React.FC = () => {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          <span className="text-sm font-medium">Continue with Google</span>
         </button>
 
-        <p className="text-gray-500 text-sm text-center mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy
+        {/* Footer Text */}
+        <p className="text-gray-500 text-xs text-center mt-6">
+          By continuing, you agree to our{' '}
+          <a href="#" className="text-blue-600 hover:text-blue-700">Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" className="text-blue-600 hover:text-blue-700">Privacy Policy</a>
         </p>
       </div>
+
+      {/* Footer Info */}
+      <p className="text-xs text-gray-500 mt-6 text-center">
+        Admin access required • Contact your administrator for access
+      </p>
     </div>
   );
 };

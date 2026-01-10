@@ -28,3 +28,14 @@ type ClerkEmailAddress struct {
 		Status string `json:"status"`
 	} `json:"verification"`
 }
+
+// SupabaseProfile represents a user from Supabase profiles table
+type SupabaseProfile struct {
+	ID        string `json:"id" bson:"id"`
+	FullName  string `json:"full_name" bson:"full_name"`
+	Email     string `json:"email" bson:"email"`
+	AvatarURL string `json:"avatar_url,omitempty" bson:"avatar_url,omitempty"`
+	Role      string `json:"role" bson:"role"`
+	CreatedAt string `json:"created_at" bson:"created_at"`
+	UpdatedAt string `json:"updated_at" bson:"updated_at"`
+}

@@ -56,14 +56,12 @@ export default function PlaylistDetail() {
         : null;
 
     const creatorName = creatorUser
-        ? `${creatorUser.first_name} ${creatorUser.last_name}`.trim() || creatorUser.email || 'Unknown User'
+        ? creatorUser.full_name || creatorUser.email || 'Unknown User'
         : playlist?.created_by
             ? 'Loading...'
             : 'Unknown';
 
-    const creatorEmail = creatorUser?.email_addresses?.find(
-        e => e.id === creatorUser.primary_email_address_id
-    )?.email_address || creatorUser?.email || '';
+    const creatorEmail = creatorUser?.email || '';
 
     // Calculate total duration
     const totalDuration = playlistTracks.reduce((sum, track) => sum + track.duration, 0);
@@ -71,43 +69,53 @@ export default function PlaylistDetail() {
 
     if (loadingPlaylist) {
         return (
-            <div className="p-8 flex items-center justify-center h-64">
-                <div className="text-gray-500">Loading playlist...</div>
+            <div className="min-h-screen bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12">
+                        <div className="flex flex-col items-center justify-center">
+                            <div className="h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+                            <p className="text-sm text-gray-600">Loading playlist...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
 
     if (playlistError || !playlist) {
         return (
-            <div className="p-8">
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                    <h2 className="text-xl font-bold text-red-600 mb-2">Playlist not found</h2>
-                    <button
-                        onClick={() => navigate('/playlists')}
-                        className="text-blue-600 hover:underline"
-                    >
-                        Back to Playlists
-                    </button>
+            <div className="min-h-screen bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
+                        <h2 className="text-lg font-semibold text-red-600 mb-2">Playlist not found</h2>
+                        <button
+                            onClick={() => navigate('/playlists')}
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                            Back to Playlists
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="p-8">
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button
-                    onClick={() => navigate('/playlists')}
-                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                    <ChevronLeft size={24} />
-                </button>
-                <h1 className="text-3xl font-bold">Playlist Details</h1>
-            </div>
+        <div className="min-h-screen bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-8">
+                    <button
+                        onClick={() => navigate('/playlists')}
+                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <h1 className="text-2xl font-semibold text-gray-900">Playlist Details</h1>
+                </div>
 
-            {/* Playlist Info Card */}
-            <div className="bg-white rounded-lg shadow mb-6">
+                {/* Playlist Info Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-6">
                 <div className="p-6 border-b">
                     <div className="flex items-start gap-6">
                         {/* Cover */}
@@ -145,17 +153,17 @@ export default function PlaylistDetail() {
                 </div>
 
                 {/* Creator Info */}
-                <div className="px-6 py-4 bg-gray-50">
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                     <div className="flex items-center gap-3">
-                        {creatorUser?.image_url ? (
+                        {creatorUser?.avatar_url ? (
                             <img
-                                src={creatorUser.image_url}
+                                src={creatorUser.avatar_url}
                                 alt={creatorName}
-                                className="w-10 h-10 rounded-full object-cover"
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
                             />
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                <User size={20} className="text-gray-600" />
+                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                <User className="h-5 w-5 text-gray-400" />
                             </div>
                         )}
                         <div>
@@ -169,15 +177,15 @@ export default function PlaylistDetail() {
                 </div>
             </div>
 
-            {/* Tracks Table */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-6 py-4 border-b">
-                    <h3 className="text-lg font-semibold">Tracks in Playlist</h3>
-                </div>
+                {/* Tracks Table */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-semibold text-gray-900">Tracks in Playlist</h3>
+                    </div>
 
-                {playlistTracks.length > 0 ? (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    {playlistTracks.length > 0 ? (
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     #
@@ -227,14 +235,17 @@ export default function PlaylistDetail() {
                                     </td>
                                 </tr>
                             ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <div className="p-8 text-center text-gray-500">
-                        <ListMusic size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>No tracks in this playlist</p>
-                    </div>
-                )}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="p-12 text-center">
+                            <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                <ListMusic className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <p className="text-sm text-gray-600">No tracks in this playlist</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

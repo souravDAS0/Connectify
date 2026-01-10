@@ -44,27 +44,36 @@ export default function Tracks() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Tracks</h1>
-        <button
-          onClick={() => setUploadModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          <Upload size={20} />
-          Upload Track
-        </button>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Loading tracks...</div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Tracks</h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Manage your music library
+            </p>
+          </div>
+          <button
+            onClick={() => setUploadModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            Upload Track
+          </button>
         </div>
-      ) : tracks && tracks.length > 0 ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+
+        {isLoading ? (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12">
+            <div className="flex flex-col items-center justify-center">
+              <div className="h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm text-gray-600">Loading tracks...</p>
+            </div>
+          </div>
+        ) : tracks && tracks.length > 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Track
@@ -158,22 +167,24 @@ export default function Tracks() {
             </table>
           </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <Music className="mx-auto text-gray-400 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tracks yet</h3>
-          <p className="text-gray-500 mb-4">
-            Upload your first track to get started
-          </p>
-          <button
-            onClick={() => setUploadModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            <Upload size={20} />
-            Upload Track
-          </button>
-        </div>
-      )}
+        ) : (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <Music className="h-6 w-6 text-gray-400" />
+            </div>
+            <h3 className="text-base font-medium text-gray-900 mb-2">No tracks yet</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Upload your first track to get started
+            </p>
+            <button
+              onClick={() => setUploadModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm transition-colors"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Track
+            </button>
+          </div>
+        )}
 
       <UploadModal
         isOpen={uploadModalOpen}
@@ -183,13 +194,14 @@ export default function Tracks() {
         }}
       />
 
-      {editTrackId && (
-        <EditTrackModal
-          trackId={editTrackId}
-          isOpen={!!editTrackId}
-          onClose={() => setEditTrackId(null)}
-        />
-      )}
+        {editTrackId && (
+          <EditTrackModal
+            trackId={editTrackId}
+            isOpen={!!editTrackId}
+            onClose={() => setEditTrackId(null)}
+          />
+        )}
+      </div>
     </div>
   );
 }

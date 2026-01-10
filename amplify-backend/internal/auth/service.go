@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/clerk/clerk-sdk-go/v2/user"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -92,103 +91,48 @@ func (s *AuthService) Login(email, password string) (string, error) {
 	return tokenString, nil
 }
 
-// GetAllUsers returns all users from Clerk (for admin)
-func (s *AuthService) GetAllUsers() ([]ClerkUser, error) {
+// GetAllUsers returns all users from Supabase profiles table
+func (s *AuthService) GetAllUsers() ([]SupabaseProfile, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Use frontend secret key to fetch app users
-	frontendSecretKey := os.Getenv("CLERK_SECRET_KEY")
-	if frontendSecretKey == "" {
-		return nil, errors.New("CLERK_SECRET_KEY not configured")
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	supabaseKey := os.Getenv("SUPABASE_ANON_KEY")
+
+	if supabaseURL == "" || supabaseKey == "" {
+		return nil, errors.New("Supabase credentials not configured")
 	}
 
-	// Make direct HTTP request to Clerk API
-	var allUsers []ClerkUser
-	limit := 500
-	offset := 0
+	// Query profiles table via Supabase REST API
+	url := fmt.Sprintf("%s/rest/v1/profiles?select=*", supabaseURL)
 
-	for {
-		url := fmt.Sprintf("https://api.clerk.com/v1/users?limit=%d&offset=%d", limit, offset)
-
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Authorization", "Bearer "+frontendSecretKey)
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			return nil, fmt.Errorf("clerk API error: %d - %s", resp.StatusCode, string(body))
-		}
-
-		var result []struct {
-			ID                    string `json:"id"`
-			FirstName             string `json:"first_name"`
-			LastName              string `json:"last_name"`
-			PrimaryEmailAddressID string `json:"primary_email_address_id"`
-			ImageURL              string `json:"image_url"`
-			CreatedAt             int64  `json:"created_at"`
-			UpdatedAt             int64  `json:"updated_at"`
-			LastSignInAt          *int64 `json:"last_sign_in_at"`
-			EmailAddresses        []struct {
-				ID           string `json:"id"`
-				EmailAddress string `json:"email_address"`
-				Verification struct {
-					Status string `json:"status"`
-				} `json:"verification"`
-			} `json:"email_addresses"`
-		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			return nil, err
-		}
-
-		// Convert to ClerkUser
-		for _, u := range result {
-			cu := ClerkUser{
-				ID:             u.ID,
-				FirstName:      u.FirstName,
-				LastName:       u.LastName,
-				PrimaryEmailID: u.PrimaryEmailAddressID,
-				ImageURL:       u.ImageURL,
-				CreatedAt:      u.CreatedAt,
-				UpdatedAt:      u.UpdatedAt,
-				LastSignInAt:   u.LastSignInAt,
-			}
-
-			for _, email := range u.EmailAddresses {
-				cu.EmailAddresses = append(cu.EmailAddresses, ClerkEmailAddress{
-					ID:           email.ID,
-					EmailAddress: email.EmailAddress,
-					Verification: struct {
-						Status string `json:"status"`
-					}{
-						Status: email.Verification.Status,
-					},
-				})
-			}
-
-			allUsers = append(allUsers, cu)
-		}
-
-		// Check if there are more users
-		if len(result) < limit {
-			break
-		}
-		offset += limit
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	return allUsers, nil
+	req.Header.Set("apikey", supabaseKey)
+	req.Header.Set("Authorization", "Bearer "+supabaseKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("supabase API error: %d - %s", resp.StatusCode, string(body))
+	}
+
+	var profiles []SupabaseProfile
+	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+		return nil, err
+	}
+
+	return profiles, nil
 }
 
 // stringValue safely dereferences a string pointer
@@ -232,18 +176,14 @@ func (s *AuthService) DeleteUser(id string) error {
 	return err
 }
 
-// GetTotalUserCount returns the total number of users from Clerk
+// GetTotalUserCount returns the total number of users from Supabase profiles
 func (s *AuthService) GetTotalUserCount() (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Use Clerk API to get total user count
-	result, err := user.Count(ctx, &user.ListParams{})
+	users, err := s.GetAllUsers()
 	if err != nil {
 		return 0, err
 	}
 
-	return result.TotalCount, nil
+	return int64(len(users)), nil
 }
 
 // ValidateToken parses and validates a JWT token

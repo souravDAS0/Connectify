@@ -54,6 +54,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Notification icon for audio service -->
+        <meta-data
+            android:name="com.ryanheise.audioservice.notificationIcon"
+            android:resource="@drawable/ic_notification"/>
+
         <!-- Audio Service for background playback -->
         <service
             android:name="com.ryanheise.audioservice.AudioService"

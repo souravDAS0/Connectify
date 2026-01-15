@@ -1,3 +1,6 @@
+import 'package:amplify_flutter/core/constants/app_typography.dart';
+import 'package:amplify_flutter/core/widgets/marquee_widget.dart';
+import 'package:amplify_flutter/core/widgets/svg_icon.dart';
 import 'package:amplify_flutter/features/music_player/application/audio_player_service.dart';
 import 'package:amplify_flutter/features/music_player/presentation/pages/full_player_page.dart';
 import 'package:amplify_flutter/features/music_player/presentation/providers/player_controller.dart';
@@ -63,44 +66,52 @@ class MiniPlayer extends ConsumerWidget {
           children: [
             Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: track.albumArtUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: track.albumArtUrl!,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                        )
-                      : Container(
-                          width: 48,
-                          height: 48,
-                          color: Colors.grey[800],
-                          child: const Icon(Icons.music_note),
-                        ),
+                Hero(
+                  tag: track.id,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: track.albumArtUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: track.albumArtUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            width: 48,
+                            height: 48,
+                            color: Colors.grey[800],
+                            child: const Icon(Icons.music_note),
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        track.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        track.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MarqueeWidget(
+                          height: 28,
+                          child: Text(
+                            track.title,
+                            maxLines: 1,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          track.artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 IconButton(
@@ -108,21 +119,17 @@ class MiniPlayer extends ConsumerWidget {
                   style: ButtonStyle(
                     backgroundColor: WidgetStatePropertyAll(Colors.white),
                     foregroundColor: WidgetStatePropertyAll(Colors.black),
-                    shape: WidgetStatePropertyAll(
-                      playerState.isPlaying
-                          ? RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            )
-                          : CircleBorder(),
-                    ),
+                    shape: WidgetStatePropertyAll(CircleBorder()),
                   ),
-                  icon: Icon(
-                    playerState.isPlaying
-                        ? LucideIcons.pause
-                        : LucideIcons.play,
-                    fill: 1,
-                    color: Colors.black,
-                  ),
+                  icon: playerState.isPlaying
+                      ? SvgIcon(
+                          'assets/icons/pause_filled.svg',
+                          color: Colors.black,
+                        )
+                      : SvgIcon(
+                          'assets/icons/play_filled.svg',
+                          color: Colors.black,
+                        ),
                   onPressed: () {
                     ref
                         .read(playerControllerProvider.notifier)
@@ -210,7 +217,7 @@ class MiniPlayer extends ConsumerWidget {
                               Duration(milliseconds: value.toInt()),
                             );
                           },
-                          activeColor: const Color.fromARGB(255, 44, 44, 44),
+                          activeColor: const Color.fromARGB(255, 255, 255, 255),
                           inactiveColor: const Color.fromARGB(255, 44, 44, 44),
                           thumbColor: const Color.fromARGB(255, 255, 255, 255),
                         ),
@@ -220,9 +227,15 @@ class MiniPlayer extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_formatDuration(position)),
+                            Text(
+                              _formatDuration(position),
+                              style: AppTypography.caption2,
+                            ),
                             Text(' / '),
-                            Text(_formatDuration(duration)),
+                            Text(
+                              _formatDuration(duration),
+                              style: AppTypography.caption2,
+                            ),
                           ],
                         ),
                       ),

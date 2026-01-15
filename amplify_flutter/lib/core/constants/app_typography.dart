@@ -54,6 +54,13 @@ class AppTypography {
     height: 1.4,
   );
 
+  static TextStyle caption2 = GoogleFonts.inter(
+    fontSize: 10,
+    fontWeight: FontWeight.normal,
+    color: AppColors.textSecondary,
+    height: 1.4,
+  );
+
   // Button Styles
   static TextStyle button = GoogleFonts.inter(
     fontSize: 16,

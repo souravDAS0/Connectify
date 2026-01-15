@@ -1,3 +1,6 @@
+import 'package:amplify_flutter/core/constants/app_typography.dart';
+import 'package:amplify_flutter/core/widgets/marquee_widget.dart';
+import 'package:amplify_flutter/core/widgets/svg_icon.dart';
 import 'package:amplify_flutter/features/authentication/presentation/providers/auth_provider.dart';
 import 'package:amplify_flutter/features/music_player/presentation/providers/websocket_provider.dart';
 import 'package:amplify_flutter/features/music_player/presentation/widgets/active_devices_bottom_sheet.dart';
@@ -105,42 +108,54 @@ class FullPlayerPage extends ConsumerWidget {
           children: [
             const SizedBox(height: 100),
             // Album Art
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: track.albumArtUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: track.albumArtUrl!,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        color: Colors.grey[800],
-                        child: const Icon(Icons.music_note, size: 80),
-                      ),
+            Hero(
+              tag: track.id,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: track.albumArtUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: track.albumArtUrl!,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.music_note, size: 80),
+                        ),
+                ),
               ),
             ),
             const SizedBox(height: 32),
             // Title & Artist
-            Text(
-              track.title,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MarqueeWidget(
+                    height: 35,
+                    child: Text(
+                      track.title,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    track.artist,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              track.artist,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Colors.grey),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+
             const Spacer(),
             // Progress Bar
             StreamBuilder<Duration>(
@@ -159,6 +174,7 @@ class FullPlayerPage extends ConsumerWidget {
                 return Column(
                   children: [
                     Slider(
+                      padding: const EdgeInsets.all(0),
                       value: position.inMilliseconds.toDouble().clamp(
                         0,
                         duration.inMilliseconds.toDouble(),
@@ -170,19 +186,22 @@ class FullPlayerPage extends ConsumerWidget {
                           Duration(milliseconds: value.toInt()),
                         );
                       },
-                      activeColor: const Color.fromARGB(255, 44, 44, 44),
+                      activeColor: const Color.fromARGB(255, 255, 255, 255),
                       inactiveColor: const Color.fromARGB(255, 44, 44, 44),
                       thumbColor: const Color.fromARGB(255, 255, 255, 255),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_formatDuration(position)),
-                          Text(_formatDuration(duration)),
-                        ],
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatDuration(position),
+                          style: AppTypography.caption,
+                        ),
+                        Text(
+                          _formatDuration(duration),
+                          style: AppTypography.caption,
+                        ),
+                      ],
                     ),
                   ],
                 );
@@ -231,21 +250,21 @@ class FullPlayerPage extends ConsumerWidget {
                 FloatingActionButton(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
-                  shape: playerState.isPlaying
-                      ? RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        )
-                      : CircleBorder(),
+                  shape: CircleBorder(),
                   onPressed: () {
                     ref
                         .read(playerControllerProvider.notifier)
                         .togglePlayPause();
                   },
-                  child: Icon(
-                    playerState.isPlaying
-                        ? LucideIcons.pause
-                        : LucideIcons.play,
-                  ),
+                  child: playerState.isPlaying
+                      ? SvgIcon(
+                          'assets/icons/pause_filled.svg',
+                          color: Colors.black,
+                        )
+                      : SvgIcon(
+                          'assets/icons/play_filled.svg',
+                          color: Colors.black,
+                        ),
                 ),
                 IconButton(
                   icon: const Icon(LucideIcons.skipForward, size: 28),
